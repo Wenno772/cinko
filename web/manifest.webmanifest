@@ -1,0 +1,14 @@
+{
+  "name": "CINKO",
+  "short_name": "CINKO",
+  "description": "Ta carte de foot à 5 qui évolue match après match.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0d1017",
+  "theme_color": "#0d1017",
+  "lang": "fr",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}
