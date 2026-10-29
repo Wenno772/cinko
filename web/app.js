@@ -102,7 +102,7 @@ async function loadProfile() {
 }
 async function afterSession() {
   try { await loadProfile(); S.msg = ''; } catch (e) { S.msg = tr(e); }
-  S.ready = true; render(true);
+  S.ready = true; render(true); checkTierUp(); previewTierUp();
 }
 
 /* ---------- vues ---------- */
@@ -233,6 +233,43 @@ async function saveProfile(patch) {
   render();
 }
 
+/* ---------- passage de niveau ---------- */
+const TCOL = { cuivre: '#e0a672', argent: '#dfe5f2', or: '#ffd35c', legende: '#f5b83c' };
+function tierUp(card, fromK, toK) {
+  const from = TIERS.find((t) => t.k === fromK), to = TIERS.find((t) => t.k === toK);
+  const old = { ...card, ovr: from.min }, nw = { ...card, ovr: Math.max(card.ovr, to.min) };
+  const el = document.createElement('div');
+  el.className = 'tu'; el.style.setProperty('--tc', TCOL[to.k]);
+  el.setAttribute('role', 'dialog'); el.setAttribute('aria-label', 'Nouveau niveau : ' + to.n);
+  const parts = new Array(28).fill(0).map(() => {
+    const a = Math.random() * 6.283, d = 90 + Math.random() * 170;
+    return `<i class="tu-p" style="--dx:${Math.round(Math.cos(a) * d)}px;--dy:${Math.round(Math.sin(a) * d)}px;--rot:${Math.round(Math.random() * 540)}deg"></i>`;
+  }).join('');
+  el.innerHTML = '<div class="tu-flash"></div><p class="tu-kick">Ta carte évolue</p>' +
+    `<div class="tu-stage"><div class="tu-old">${cardHTML(old)}</div><div class="tu-new">${cardHTML(nw)}</div><i class="tu-ring"></i><i class="tu-ring r2"></i>${parts}</div>` +
+    `<div class="tu-name">${to.n}</div><p class="tu-sub">${esc(card.name)} passe ${to.n}.</p><button type="button" class="btn">Continuer</button>`;
+  document.body.appendChild(el);
+  requestAnimationFrame(() => el.classList.add('go'));
+  const close = () => { el.classList.add('out'); setTimeout(() => el.remove(), 400); };
+  el.querySelector('.btn').addEventListener('click', close);
+  if (navigator.vibrate) setTimeout(() => navigator.vibrate([30, 40, 60]), 1400);
+}
+// Compare le niveau actuel à celui vu la dernière fois (stocké sur cet appareil).
+function checkTierUp() {
+  if (!S.profile) return;
+  const key = 'cinko-tier-' + S.profile.id, now = tier(S.profile.ovr).k;
+  let last = null;
+  try { last = localStorage.getItem(key); localStorage.setItem(key, now); } catch (e) { return; }
+  if (last && TIERS.findIndex((t) => t.k === now) > TIERS.findIndex((t) => t.k === last)) tierUp(myCard(), last, now);
+}
+// Aperçu : ajoute #niveau-argent (ou or, legende) à l'adresse pour voir l'animation.
+function previewTierUp() {
+  const m = /^#niveau-(argent|or|legende)$/.exec(location.hash);
+  if (!m || !S.profile) return;
+  const k = m[1], i = TIERS.findIndex((t) => t.k === k);
+  location.hash = '#carte'; tierUp({ ...myCard(), ovr: TIERS[i].min }, TIERS[i - 1].k, k);
+}
+
 /* ---------- événements ---------- */
 document.addEventListener('submit', async (e) => {
   if (e.target.id !== 'authForm') return;
@@ -310,7 +347,7 @@ document.addEventListener('change', async (e) => {
   }
 });
 
-window.addEventListener('hashchange', () => render(true));
+window.addEventListener('hashchange', () => { render(true); previewTierUp(); });
 
 sb.auth.onAuthStateChange((evt, session) => {
   if (evt === 'INITIAL_SESSION') return;
