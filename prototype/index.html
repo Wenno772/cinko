@@ -1,0 +1,1171 @@
+<title>CINKO Five</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800;900&family=Hanken+Grotesk:wght@400;500;600;700&display=swap">
+<style>
+/* Layout concept: one narrow app column under a floodlight, five tabs at the bottom.
+   Gold lives on the cards and the single primary action; everything else stays blue-black and chalk. */
+:root {
+  color-scheme: dark;
+  --night: #0d1017;
+  --surface: #151a24;
+  --surface-2: #1d2431;
+  --line: #2a3242;
+  --chalk: #ece9df;
+  --muted: #8e97ab;
+  --lamp: #f0b33c;
+  --lamp-ink: #2b1c04;
+  --win: #53d08a;
+  --loss: #ea6350;
+  --beam: 255, 226, 160; --ba: .2; --glow: 240, 179, 60; --floor: 31, 92, 56;
+  --turf: #14301f;
+  --turf-2: #183a26;
+  --display: 'Big Shoulders Display', 'Arial Narrow', 'Helvetica Neue', Impact, sans-serif;
+  --body: 'Hanken Grotesk', system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+* { box-sizing: border-box; }
+html { background: var(--night); -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: transparent;
+  color: var(--chalk);
+  font: 400 15px/1.45 var(--body);
+}
+body[data-tier=cuivre] { --beam: 255, 184, 120; --glow: 224, 140, 80; --floor: 70, 40, 22; }
+body[data-tier=argent] { --beam: 214, 228, 255; --glow: 170, 190, 230; --floor: 30, 52, 84; }
+body[data-tier=legende] { --beam: 255, 210, 110; --ba: .32; --glow: 245, 190, 80; --floor: 84, 52, 150; }
+.t-legende .shape::after { animation: gleam 5s ease-in-out infinite; }
+@keyframes gleam { 0%, 55% { background-position: 130% 0; } 100% { background-position: -30% 0; } }
+.tgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px 14px; }
+.tcell { display: grid; gap: 8px; justify-items: center; padding: 0; border: 0; background: none; cursor: pointer; text-align: center; color: inherit; min-width: 0; }
+.tcell .card-wrap { max-width: 100%; }
+.tcell b { font: 800 22px/1 var(--display); letter-spacing: .06em; text-transform: uppercase; }
+.tcell small { color: var(--muted); font-size: 12.5px; line-height: 1.3; }
+.tcell[aria-pressed=true] b { color: var(--lamp); }
+/* Fond fixe : deux projecteurs, lignes de terrain à peine visibles, grain, vignette. Reste derrière tout le contenu. */
+body::before {
+  content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none;
+  background:
+    conic-gradient(from 160deg at 0% -2%, transparent 0deg, rgba(var(--beam), var(--ba)) 14deg, transparent 32deg),
+    conic-gradient(from 188deg at 100% -2%, transparent 0deg, rgba(var(--beam), calc(var(--ba) * .85)) 14deg, transparent 32deg),
+    radial-gradient(640px 420px at 50% -80px, rgba(var(--glow), .16), transparent 72%),
+    linear-gradient(to top, rgba(var(--floor), .34), transparent 38%),
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 800' preserveAspectRatio='xMidYMid slice'><g fill='none' stroke='%23ece9df' stroke-opacity='.13' stroke-width='1.6'><circle cx='200' cy='400' r='84'/><path d='M-20 400H420'/><circle cx='200' cy='400' r='3' fill='%23ece9df' fill-opacity='.13'/><rect x='70' y='-6' width='260' height='120'/><rect x='70' y='686' width='260' height='120'/><path d='M150 114a50 50 0 0 0 100 0M150 686a50 50 0 0 1 100 0'/></g></svg>") center / cover no-repeat,
+    radial-gradient(120% 90% at 50% 40%, transparent 60%, rgba(0,0,0,.38) 100%);
+}
+body::after {
+  content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none; opacity: .06; mix-blend-mode: overlay;
+  background: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 1 0'/></filter><rect width='160' height='160' filter='url(%23n)'/></svg>");
+}
+button, input, select { font: inherit; color: inherit; }
+a { color: inherit; }
+:focus-visible { outline: 2px solid var(--chalk); outline-offset: 2px; }
+
+.app {
+  max-width: 520px;
+  margin: 0 auto;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 14px 110px;
+}
+.top { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding-bottom: 18px; }
+.logo { font: 900 32px/1 var(--display); letter-spacing: .08em; text-decoration: none; }
+.logo i { font-style: normal; color: var(--lamp); }
+.hright { display: flex; align-items: center; gap: 10px; }
+.hlink { font: 600 13px/1 var(--body); color: var(--chalk); text-decoration: none; border-bottom: 1px solid var(--muted); padding: 6px 0 4px; }
+.tag { font: 600 10px/1 var(--body); letter-spacing: .12em; text-transform: uppercase; color: var(--muted); border: 1px solid var(--line); border-radius: 99px; padding: 6px 10px; }
+
+.kicker { font: 600 11px/1.2 var(--body); letter-spacing: .14em; text-transform: uppercase; color: var(--muted); margin: 0 0 6px; }
+.screen-title { font: 800 40px/.95 var(--display); letter-spacing: .02em; text-transform: uppercase; margin: 0 0 14px; text-wrap: balance; }
+.lede { color: var(--muted); max-width: 52ch; margin: 0; }
+.muted { color: var(--muted); margin: 8px 0 0; }
+.small { font-size: 13px; }
+main > * + * { margin-top: 16px; }
+
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 16px; min-width: 0; }
+.list { list-style: none; margin: 0; padding: 0; }
+.list > li { border-top: 1px solid var(--line); }
+.list > li:first-child { border-top: 0; }
+
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 48px; padding: 0 20px; border: 0; border-radius: 10px; background: var(--lamp); color: var(--lamp-ink); font: 700 15px/1 var(--body); text-decoration: none; cursor: pointer; }
+.btn:hover { filter: brightness(1.06); }
+.btn.ghost { background: transparent; color: var(--chalk); border: 1px solid var(--line); }
+.btn.sm { min-height: 38px; padding: 0 14px; font-size: 13px; }
+.btn.block { display: flex; width: 100%; }
+.btn[disabled] { opacity: .35; cursor: not-allowed; filter: none; }
+
+.field { display: grid; gap: 6px; margin-top: 12px; min-width: 0; }
+.field > span { font: 600 12px/1.2 var(--body); color: var(--muted); }
+input[type=text], select { width: 100%; min-height: 46px; padding: 0 12px; background: var(--surface-2); border: 1px solid var(--line); border-radius: 10px; }
+input[type=range] { width: 100%; accent-color: var(--lamp); margin: 8px 0 2px; }
+.check { display: flex; align-items: center; gap: 10px; margin-top: 14px; font-size: 14px; cursor: pointer; }
+.check input { width: 20px; height: 20px; accent-color: var(--lamp); flex: none; }
+
+.seg { display: flex; gap: 2px; padding: 3px; background: var(--night); border: 1px solid var(--line); border-radius: 10px; }
+.seg button { flex: 1; min-height: 38px; padding: 0 6px; border: 0; border-radius: 8px; background: transparent; color: var(--muted); font: 600 13px/1 var(--body); cursor: pointer; }
+.seg button[aria-pressed=true] { background: var(--surface-2); color: var(--chalk); box-shadow: inset 0 0 0 1px var(--line); }
+
+/* Card tiers: everyone starts on copper at 60 and earns the next metal. */
+.t-cuivre { --c1: #e0a672; --c2: #8c5629; --ink: #2b1709; --rule: rgba(43,23,9,.35); --inner: linear-gradient(160deg, rgba(255,255,255,.28), rgba(0,0,0,.04) 55%, rgba(0,0,0,.14)); }
+.t-argent { --c1: #eef1f7; --c2: #8b94aa; --ink: #161a26; --rule: rgba(22,26,38,.3); --inner: linear-gradient(160deg, rgba(255,255,255,.4), rgba(0,0,0,.02) 55%, rgba(0,0,0,.14)); }
+.t-or { --c1: #ffe08a; --c2: #c28a20; --ink: #2b1c04; --rule: rgba(43,28,4,.32); --inner: linear-gradient(160deg, rgba(255,255,255,.35), rgba(0,0,0,.02) 55%, rgba(0,0,0,.14)); }
+.t-legende { --c1: #f0b33c; --c2: #7a4f0c; --ink: #f5c35a; --rule: rgba(245,195,90,.35); --inner: linear-gradient(160deg, #262938, #0d0f16 70%); }
+
+.card-wrap { width: 100%; filter: drop-shadow(0 18px 24px rgba(0,0,0,.55)); }
+.card-wrap.full { max-width: 292px; margin-inline: auto; perspective: 900px; }
+.card-wrap.preview { max-width: 188px; }
+.card-wrap.mini { filter: drop-shadow(0 6px 8px rgba(0,0,0,.5)); }
+.card { container-type: inline-size; position: relative; width: 100%; aspect-ratio: 5 / 7; transform: rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg)); transition: transform .18s ease-out; }
+.shape { position: absolute; inset: 0; background: linear-gradient(150deg, var(--c1), var(--c2)); clip-path: polygon(0 0, calc(100% - 9cqw) 0, 100% 9cqw, 100% 100%, 9cqw 100%, 0 calc(100% - 9cqw)); }
+.shape::after { content: ""; position: absolute; inset: 0; background: linear-gradient(115deg, transparent 32%, rgba(255,255,255,.38) 47%, transparent 62%); background-size: 260% 100%; background-position: var(--sx, 130%) 0; mix-blend-mode: soft-light; pointer-events: none; }
+.inner { position: absolute; inset: 1.8cqw; background: var(--inner); color: var(--ink); padding: 6cqw 6cqw 5cqw; display: flex; flex-direction: column; clip-path: polygon(0 0, calc(100% - 7.6cqw) 0, 100% 7.6cqw, 100% 100%, 7.6cqw 100%, 0 calc(100% - 7.6cqw)); }
+.c-top { position: relative; flex: 1; min-height: 0; display: flex; }
+.c-left { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: flex-start; gap: 1.6cqw; }
+.c-ovr { font: 900 24cqw/.82 var(--display); font-variant-numeric: tabular-nums; }
+.c-pos { font: 800 6.4cqw/1 var(--display); letter-spacing: .12em; }
+.c-init { position: absolute; right: -3cqw; bottom: -2cqw; font: 900 54cqw/.8 var(--display); letter-spacing: -.02em; opacity: .17; user-select: none; }
+.c-name { font: 800 9cqw/1 var(--display); letter-spacing: .05em; text-transform: uppercase; text-align: center; border-top: .7cqw solid var(--rule); padding-top: 2.6cqw; margin-top: 2.4cqw; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.c-stats { display: grid; grid-template-columns: repeat(3, 1fr); row-gap: 1.2cqw; margin-top: 2.6cqw; }
+.c-stat { display: flex; justify-content: center; align-items: baseline; gap: 1.6cqw; font: 800 6.8cqw/1.2 var(--display); font-variant-numeric: tabular-nums; }
+.c-stat small { font: 700 3.8cqw/1 var(--body); letter-spacing: .08em; opacity: 1; }
+.c-stat:nth-child(3n+2), .c-stat:nth-child(3n) { border-left: .5cqw solid var(--rule); }
+.c-foot { margin-top: 3cqw; text-align: center; font: 700 3cqw/1 var(--body); letter-spacing: .22em; text-transform: uppercase; opacity: .7; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.c-photo { position: absolute; right: -4cqw; bottom: -1cqw; width: 64%; height: 104%; overflow: hidden; pointer-events: none; }
+.c-photo img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: center top; -webkit-mask-image: linear-gradient(to bottom, #000 68%, transparent); mask-image: linear-gradient(to bottom, #000 68%, transparent); }
+.filebtn { position: relative; overflow: hidden; cursor: pointer; }
+.filebtn input { position: absolute; inset: 0; width: 100%; opacity: 0; cursor: pointer; }
+.photoctl { display: grid; gap: 8px; margin-top: 14px; }
+.photoctl > span { font: 600 12px/1.2 var(--body); color: var(--muted); }
+.photoctl .row2 { display: flex; gap: 8px; flex-wrap: wrap; }
+/* Matières : métal brossé (cuivre, argent), hachures + foil irisé (or), liserés dorés + foil (légende). */
+.t-cuivre { --tex: repeating-linear-gradient(90deg, rgba(255,255,255,.55) 0 .25cqw, transparent .25cqw 1.1cqw); --texo: .22; }
+.t-argent { --tex: repeating-linear-gradient(90deg, rgba(255,255,255,.7) 0 .25cqw, transparent .25cqw 1.1cqw); --texo: .28; }
+.t-or { --tex: repeating-linear-gradient(120deg, var(--rule) 0 .3cqw, transparent .3cqw 2.6cqw); --texo: .55; }
+.t-legende { --tex: repeating-linear-gradient(120deg, rgba(245,195,90,.55) 0 .25cqw, transparent .25cqw 2.2cqw); --texo: .4; }
+.inner::before { content: ""; position: absolute; inset: 0; pointer-events: none; background: var(--tex); opacity: var(--texo, .3); -webkit-mask-image: linear-gradient(to bottom, #000 0, transparent 72%); mask-image: linear-gradient(to bottom, #000 0, transparent 72%); }
+.t-or .inner::after, .t-legende .inner::after { content: ""; position: absolute; inset: 0; pointer-events: none; background: linear-gradient(125deg, transparent 18%, rgba(120,210,255,.26) 36%, rgba(255,120,200,.22) 50%, rgba(255,232,120,.28) 64%, transparent 82%); mix-blend-mode: soft-light; }
+.t-legende .inner::after { mix-blend-mode: screen; opacity: .4; }
+.frame { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.frame polygon { fill: none; stroke: var(--ink); stroke-opacity: .38; stroke-width: .55; }
+.t-legende .frame polygon { stroke-opacity: .85; stroke-width: .7; }
+.c-pips { display: flex; gap: 1.4cqw; margin-top: .6cqw; }
+.c-pips i { width: 3.4cqw; height: 3.4cqw; background: var(--ink); clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%); opacity: .8; }
+.mini .c-pips { display: none; }
+.card-wrap.full:has(.t-or) { filter: drop-shadow(0 18px 24px rgba(0,0,0,.55)) drop-shadow(0 0 16px rgba(240,179,60,.22)); }
+.card-wrap.full:has(.t-legende) { filter: drop-shadow(0 18px 24px rgba(0,0,0,.6)) drop-shadow(0 0 26px rgba(245,190,80,.45)); }
+.camps { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 14px; }
+.camp ul { list-style: none; margin: 6px 0 0; padding: 0; }
+.camp .prow { display: grid; grid-template-columns: 34px minmax(0, 1fr); gap: 8px; align-items: center; padding: 7px 0; border-top: 1px solid var(--line); min-width: 0; }
+.camp .ovr-badge { width: 32px; height: 32px; font-size: 18px; border-radius: 7px; }
+.camp .prow .who b { font-size: 13.5px; }
+.camp .prow .who small { font-size: 11.5px; }
+.camp .prow.wait { opacity: .45; }
+.camp .prow.wait .ph { width: 32px; height: 32px; border-radius: 7px; border: 1px dashed var(--muted); }
+.camp h3 { margin: 0; font: 800 17px/1.1 var(--display); letter-spacing: .05em; text-transform: uppercase; }
+.tierup.down { color: var(--loss); }
+.mini .inner { padding: 7cqw 7cqw 6cqw; }
+.mini .c-ovr { font-size: 34cqw; }
+.mini .c-pos { font-size: 14cqw; }
+.mini .c-init { font-size: 74cqw; right: -6cqw; bottom: -4cqw; opacity: .12; }
+.mini .c-name { font-size: 16cqw; letter-spacing: .02em; border-top-width: 1cqw; padding-top: 4cqw; margin-top: 4cqw; }
+
+.ovr-badge { display: inline-grid; place-items: center; width: 40px; height: 40px; border-radius: 8px; background: linear-gradient(150deg, var(--c1), var(--c2)); color: var(--ink); font: 900 22px/1 var(--display); font-variant-numeric: tabular-nums; flex: none; }
+
+.tierbar .tb-top { display: flex; justify-content: space-between; align-items: baseline; font-size: 13px; color: var(--muted); }
+.tierbar .tb-top b { font: 800 22px/1 var(--display); letter-spacing: .06em; text-transform: uppercase; color: var(--chalk); }
+.prog { height: 8px; background: var(--surface-2); border-radius: 99px; overflow: hidden; margin-top: 8px; }
+.prog > i { display: block; height: 100%; background: var(--lamp); border-radius: 99px; }
+
+.bars { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; align-items: end; height: 130px; margin-top: 10px; }
+.bar { display: grid; justify-items: center; align-content: end; gap: 4px; height: 100%; min-width: 0; }
+.bar .v { font: 800 17px/1 var(--display); font-variant-numeric: tabular-nums; }
+.bar .col { width: 100%; max-width: 44px; background: var(--surface-2); border-radius: 6px 6px 2px 2px; border-top: 3px solid var(--lamp); }
+.bar.last .col { background: #3a3220; }
+.head-row { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+.avg { font: 700 13px/1 var(--body); color: var(--muted); font-variant-numeric: tabular-nums; }
+
+.dots { display: inline-flex; gap: 4px; }
+.dot { display: inline-grid; place-items: center; width: 20px; height: 20px; border-radius: 50%; font: 700 10px/1 var(--body); font-style: normal; background: var(--surface-2); color: var(--muted); }
+.dot.d-V { background: rgba(83,208,138,.18); color: var(--win); }
+.dot.d-D { background: rgba(234,99,80,.18); color: var(--loss); }
+
+.teamhead { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 14px 28px; }
+.bignum { display: grid; }
+.bignum span { font: 900 72px/.8 var(--display); font-variant-numeric: tabular-nums; }
+.bignum small, .rec small { font: 600 11px/1.2 var(--body); letter-spacing: .12em; text-transform: uppercase; color: var(--muted); margin-top: 6px; }
+.rec { display: grid; gap: 4px; font: 700 14px/1 var(--body); color: var(--muted); }
+.rec b { font: 800 30px/1 var(--display); color: var(--chalk); font-variant-numeric: tabular-nums; margin-right: 2px; }
+.rec .line { display: flex; gap: 12px; align-items: baseline; }
+
+.pitch { position: relative; aspect-ratio: 4 / 5; border-radius: 12px; overflow: hidden; border: 1px solid var(--line); background: repeating-linear-gradient(0deg, var(--turf) 0 10%, var(--turf-2) 10% 20%); }
+.pitch .lines { position: absolute; inset: 0; width: 100%; height: 100%; }
+.slot { position: absolute; width: 22%; transform: translate(-50%, -50%); padding: 0; border: 0; background: none; cursor: pointer; border-radius: 8px; color: inherit; }
+.slot[aria-pressed=true] { outline: 2px solid var(--lamp); outline-offset: 4px; }
+.goalpill { position: absolute; left: 50%; bottom: 4%; transform: translateX(-50%); padding: 7px 12px; border: 1.5px dashed rgba(236,233,223,.5); border-radius: 99px; font: 700 11px/1 var(--body); letter-spacing: .08em; text-transform: uppercase; color: rgba(236,233,223,.88); white-space: nowrap; }
+.hint { font-size: 13px; color: var(--muted); margin: 8px 0 0; }
+.lineup-bar { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 8px; font-size: 13.5px; color: var(--muted); }
+.lineup-bar b { color: var(--chalk); }
+.goalrow { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 10px; }
+.goalrow p { margin: 0; }
+
+.row { display: grid; grid-template-columns: 30px 44px minmax(0, 1fr) auto; align-items: center; gap: 10px; width: 100%; padding: 10px 6px; border: 0; background: none; text-align: left; cursor: pointer; border-radius: 10px; }
+.row.me { background: rgba(240,179,60,.09); }
+.rank { font: 800 20px/1 var(--display); color: var(--muted); font-variant-numeric: tabular-nums; }
+.who { min-width: 0; display: grid; }
+.who b { font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.who small { color: var(--muted); font-size: 12.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.me-tag { font: 700 9px/1 var(--body); letter-spacing: .12em; padding: 3px 6px; border-radius: 4px; background: var(--lamp); color: var(--lamp-ink); margin-left: 6px; vertical-align: 2px; }
+.trend { font: 700 12px/1 var(--body); font-variant-numeric: tabular-nums; color: var(--muted); text-align: right; }
+.trend.up { color: var(--win); }
+.trend.dn { color: var(--loss); }
+
+.leaguehead .name { font: 800 26px/1 var(--display); letter-spacing: .04em; text-transform: uppercase; }
+.leaguehead .sub { color: var(--muted); font-size: 13px; margin: 4px 0 0; }
+.next { display: flex; align-items: center; gap: 12px; }
+.next .who b { white-space: normal; }
+.jchip { flex: none; display: inline-grid; place-items: center; min-width: 44px; height: 32px; padding: 0 8px; border-radius: 8px; background: var(--surface-2); border: 1px solid var(--line); font: 800 16px/1 var(--display); letter-spacing: .04em; }
+.lt { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+.lt th { font: 600 10.5px/1 var(--body); letter-spacing: .1em; text-transform: uppercase; color: var(--muted); text-align: right; padding: 4px 6px 8px; }
+.lt th:first-child, .lt th:nth-child(2) { text-align: left; }
+.lt td { padding: 10px 6px; border-top: 1px solid var(--line); text-align: right; font-size: 14px; }
+.lt td:first-child { text-align: left; width: 26px; font: 800 18px/1 var(--display); color: var(--muted); }
+.lt td:nth-child(2) { text-align: left; }
+.lt td b { display: block; font-weight: 700; }
+.lt td small { display: block; color: var(--muted); font-size: 12px; margin-top: 2px; }
+.lt tr.me td { background: rgba(240,179,60,.09); }
+.lt .pts { font: 800 22px/1 var(--display); }
+.zone { font: 700 10px/1 var(--body); letter-spacing: .08em; text-transform: uppercase; }
+.zone.up { color: var(--win); }
+.zone.down { color: var(--loss); }
+.legend { font-size: 12.5px; color: var(--muted); margin: 0; }
+
+.mrow { display: grid; grid-template-columns: 78px minmax(0, 1fr) auto auto; gap: 10px; align-items: center; padding: 11px 0; font-size: 14px; }
+.mrow .d { color: var(--muted); font-size: 12.5px; line-height: 1.25; }
+.mrow .d em { display: block; font-style: normal; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; font-size: 10.5px; }
+.mrow .sc { font: 800 20px/1 var(--display); font-variant-numeric: tabular-nums; }
+
+.score { display: grid; grid-template-columns: 1fr auto 1fr; gap: 10px; align-items: end; margin-top: 16px; }
+.score .side { display: grid; gap: 8px; justify-items: center; min-width: 0; text-align: center; }
+.score .tname { font: 700 12.5px/1.2 var(--body); color: var(--muted); }
+.score .sep { font: 800 28px/1 var(--display); color: var(--muted); padding-bottom: 14px; }
+.stepper { display: flex; align-items: center; gap: 8px; }
+.stepper button { width: 42px; height: 42px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface-2); font-size: 20px; line-height: 1; cursor: pointer; }
+.stepper output { min-width: 40px; text-align: center; font: 900 48px/1 var(--display); font-variant-numeric: tabular-nums; }
+.verdict { margin: 14px 0 0; text-align: center; font: 700 12px/1 var(--body); letter-spacing: .14em; text-transform: uppercase; }
+.verdict.V { color: var(--win); }
+.verdict.D { color: var(--loss); }
+.verdict.N { color: var(--muted); }
+.fixed-opp { margin-top: 12px; display: flex; align-items: center; gap: 12px; }
+
+.rate-list > .rate { padding: 14px 0; border-top: 1px solid var(--line); }
+.rate-list > .rate:first-child { border-top: 0; padding-top: 6px; }
+.rate-head { display: flex; align-items: center; gap: 10px; }
+.rate-head .who { flex: 1; }
+.rate-val { font: 900 30px/1 var(--display); font-variant-numeric: tabular-nums; min-width: 52px; text-align: right; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.chip { min-height: 34px; padding: 0 12px; border-radius: 99px; border: 1px solid var(--line); background: transparent; color: var(--muted); font: 600 13px/1 var(--body); cursor: pointer; }
+.chip[aria-pressed=true] { background: var(--chalk); color: var(--night); border-color: var(--chalk); }
+
+.res-banner { display: grid; gap: 4px; text-align: center; }
+.res-banner .big { font: 900 54px/.9 var(--display); font-variant-numeric: tabular-nums; }
+.res-banner .tn { font: 600 13px/1.2 var(--body); color: var(--muted); }
+.tierup { text-align: center; font: 900 30px/1 var(--display); letter-spacing: .1em; text-transform: uppercase; color: var(--lamp); margin: 4px 0 14px; }
+.delta { text-align: center; font: 800 22px/1 var(--display); margin: 4px 0 14px; letter-spacing: .04em; }
+.reveal { animation: reveal .9s cubic-bezier(.2,.8,.2,1) both; }
+@keyframes reveal { from { transform: rotateY(90deg) scale(.88); opacity: 0; } to { transform: none; opacity: 1; } }
+.rrow { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 12px; align-items: center; padding: 10px 0; font-size: 14px; font-variant-numeric: tabular-nums; }
+.rrow .arrow { color: var(--muted); }
+.facts { display: grid; gap: 8px; margin: 0; }
+.facts div { display: flex; justify-content: space-between; gap: 12px; font-size: 14px; }
+.facts dt { color: var(--muted); }
+.facts dd { margin: 0; font-weight: 700; font-variant-numeric: tabular-nums; text-align: right; }
+
+.ch { display: grid; gap: 10px; padding: 14px 0; }
+.ch-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+.ch-top .who b { font-size: 16px; white-space: normal; }
+.status { flex: none; font: 700 10.5px/1 var(--body); letter-spacing: .1em; text-transform: uppercase; padding: 6px 9px; border-radius: 99px; background: var(--surface-2); color: var(--muted); }
+.status.todo { background: var(--chalk); color: var(--night); }
+.status.ok { background: rgba(83,208,138,.16); color: var(--win); }
+.ch-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+/* Sign-up flow */
+.steps { display: flex; gap: 6px; flex: 1; }
+.steps i { flex: 1; height: 4px; border-radius: 99px; background: var(--surface-2); }
+.steps i.on { background: var(--lamp); }
+.onb-top { display: flex; align-items: center; gap: 14px; }
+.onb-card { display: grid; grid-template-columns: min(188px, 100%); justify-content: center; padding: 6px 0 4px; }
+.onb-card .card-wrap { max-width: none; }
+.opts { display: grid; gap: 8px; margin-top: 4px; }
+.opt { display: grid; grid-template-columns: 46px minmax(0, 1fr); gap: 12px; align-items: center; width: 100%; min-height: 62px; padding: 10px 12px; text-align: left; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); cursor: pointer; }
+.opt .code { display: grid; place-items: center; height: 40px; border-radius: 8px; border: 1px solid var(--line); background: var(--night); font: 800 15px/1 var(--display); letter-spacing: .08em; }
+.opt b { display: block; font-size: 15px; }
+.opt small { display: block; color: var(--muted); font-size: 12.5px; line-height: 1.3; margin-top: 2px; }
+.opt[aria-pressed=true] { border-color: var(--chalk); background: var(--surface-2); box-shadow: inset 0 0 0 1px var(--chalk); }
+.opt[aria-pressed=true] .code { background: var(--chalk); color: var(--night); border-color: var(--chalk); }
+.optgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.optgrid .opt { grid-template-columns: minmax(0, 1fr); min-height: 70px; align-content: center; }
+.actions { display: grid; grid-template-columns: auto 1fr; gap: 10px; }
+.actions > .btn:only-child, .actions.solo { grid-template-columns: 1fr; }
+.codebox { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 12px; padding: 12px 14px; border: 1px dashed var(--muted); border-radius: 10px; }
+.codebox code { font: 800 24px/1 var(--display); letter-spacing: .12em; user-select: all; }
+.msg { margin: 8px 0 0; font-size: 13px; min-height: 18px; }
+.msg.ok { color: var(--win); }
+.msg.err { color: var(--loss); }
+.how { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; }
+.how li { display: grid; grid-template-columns: 28px 1fr; gap: 10px; align-items: baseline; font-size: 14px; }
+.how li span { font: 800 20px/1 var(--display); color: var(--lamp); }
+
+.sheet { position: fixed; inset: 0; z-index: 40; display: grid; place-items: center; padding: 20px max(16px, env(safe-area-inset-right, 0px)) 20px max(16px, env(safe-area-inset-left, 0px)); }
+.sheet-bg { position: absolute; inset: 0; background: rgba(5,7,11,.82); border: 0; cursor: pointer; }
+.sheet-in { position: relative; width: min(100%, 340px); display: grid; gap: 14px; justify-items: center; }
+.sheet-in .card-wrap.full { max-width: 300px; }
+.sheet-in p { margin: 0; text-align: center; color: var(--muted); font-size: 13.5px; }
+
+.nav { position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; background: rgba(13,16,23,.94); border-top: 1px solid var(--line); padding: 6px max(8px, env(safe-area-inset-right, 0px)) calc(6px + env(safe-area-inset-bottom, 0px)) max(8px, env(safe-area-inset-left, 0px)); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); }
+.nav-in { max-width: 520px; margin: 0 auto; display: grid; grid-template-columns: repeat(5, 1fr); gap: 2px; }
+.tab { display: grid; justify-items: center; align-content: center; gap: 3px; min-height: 54px; border-radius: 10px; color: var(--muted); text-decoration: none; font: 600 11px/1 var(--body); }
+.tab svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.tab[aria-current=page] { color: var(--lamp); }
+.help { display: grid; gap: 10px; }
+.help .row2 { display: flex; gap: 8px; flex-wrap: wrap; }
+.loan { display: flex; align-items: center; gap: 12px; }
+.shareimg { width: 100%; border-radius: 12px; border: 1px solid var(--line); display: block; }
+.awards { display: grid; gap: 8px; margin: 10px 0 0; padding: 0; list-style: none; }
+.awards li { display: flex; justify-content: space-between; gap: 12px; font-size: 14px; }
+.awards li span { color: var(--muted); }
+.awards li b { text-align: right; }
+.pend { text-align: center; font: 700 12px/1.3 var(--body); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.pend.ok { color: var(--win); }
+.deltas { display: flex; justify-content: space-between; gap: 8px; margin: 12px 0 0; font-size: 13px; color: var(--muted); }
+.deltas b { color: var(--chalk); font-variant-numeric: tabular-nums; }
+body.onb .nav, body.onb .foot { display: none; }
+body.onb .app { padding-block: 14px 40px; }
+
+.toast { position: fixed; left: 50%; bottom: calc(80px + env(safe-area-inset-bottom, 0px)); transform: translate(-50%, 12px); z-index: 50; max-width: min(92vw, 420px); padding: 12px 16px; border-radius: 10px; background: var(--chalk); color: var(--night); font: 600 14px/1.3 var(--body); opacity: 0; pointer-events: none; transition: opacity .2s, transform .2s; }
+.toast.on { opacity: 1; transform: translate(-50%, 0); }
+
+.foot { margin-top: 28px; display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; color: var(--muted); font-size: 12.5px; }
+.linkbtn { background: none; border: 0; padding: 8px 0; color: var(--muted); text-decoration: underline; cursor: pointer; font-size: 12.5px; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
+</style>
+
+<div class="app">
+  <header class="top">
+    <a class="logo" href="#carte" aria-label="CINKO, accueil">CINK<i>O</i></a>
+    <div class="hright"><a class="hlink" href="#inscription">Voir l’inscription</a><span class="tag">Prototype</span></div>
+  </header>
+  <main id="view"></main>
+  <footer class="foot">
+    <span>Joueurs, équipes et scores inventés pour la démo.</span>
+    <button class="linkbtn" type="button" data-act="reset">Réinitialiser la démo</button>
+  </footer>
+</div>
+
+<nav class="nav" aria-label="Navigation principale">
+  <div class="nav-in">
+    <a class="tab" data-r="carte" href="#carte"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="3" width="14" height="18" rx="2.5"/><path d="M9 8h2M9 12h6M9 16h6"/></svg><span>Carte</span></a>
+    <a class="tab" data-r="equipe" href="#equipe"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M12 5v14"/><circle cx="12" cy="12" r="2.6"/></svg><span>Équipe</span></a>
+    <a class="tab" data-r="match" href="#match"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="13" r="7.5"/><path d="M12 9v4.5l3 1.8M10 3h4"/></svg><span>Match</span></a>
+    <a class="tab" data-r="classement" href="#classement"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 20v-7M12 20V5M19 20v-10"/></svg><span>Classement</span></a>
+    <a class="tab" data-r="defis" href="#defis"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 2.5 5 14h6l-1 7.5L19 10h-6z"/></svg><span>Défis</span></a>
+  </div>
+</nav>
+<div id="sheet"></div>
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+<script>
+(function () {
+  'use strict';
+
+  var $ = function (s) { return document.querySelector(s); };
+  var esc = function (s) { return String(s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); };
+  var clamp = function (n, a, b) { return Math.max(a, Math.min(b, n)); };
+  var fmt = function (n) { return Number(n).toLocaleString('fr-FR', { minimumFractionDigits: 1, maximumFractionDigits: 1 }); };
+  var mean = function (a) { return a.reduce(function (x, y) { return x + y; }, 0) / a.length; };
+  var REDUCED = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  var POS = ['GB', 'DEF', 'MIL', 'ALI', 'ATT'];
+  var POSN = { GB: 'Gardien', DEF: 'Défenseur', MIL: 'Milieu', ALI: 'Ailier', ATT: 'Attaquant' };
+  var POSD = {
+    GB: 'Tu aimes les gants. Ton équipe peut te mettre au but fixe.',
+    DEF: 'Tu fermes les espaces et tu relances.',
+    MIL: 'Tu relies tout le monde et tu fais tourner le jeu.',
+    ALI: 'Tu files sur les côtés et tu centres.',
+    ATT: 'Tu finis les actions devant le but.'
+  };
+  var STATK = ['VIT', 'TIR', 'PAS', 'DRI', 'DEF', 'ESP'];
+  var STATL = { VIT: 'VIT', TIR: 'TIR', PAS: 'PAS', DRI: 'DRI', DEF: 'DÉF', ESP: 'ESP' };
+  var TAGS = [
+    { k: 'Buteur', s: 'TIR' }, { k: 'Passeur', s: 'PAS' }, { k: 'Mur', s: 'DEF' },
+    { k: 'Pétard', s: 'VIT' }, { k: 'Magicien', s: 'DRI' }, { k: 'Bon esprit', s: 'ESP' }
+  ];
+  var TIERS = [
+    { k: 'cuivre', n: 'Cuivre', min: 60 }, { k: 'argent', n: 'Argent', min: 65 },
+    { k: 'or', n: 'Or', min: 75 }, { k: 'legende', n: 'Légende', min: 85 }
+  ];
+  var tier = function (o) { return o >= 85 ? TIERS[3] : o >= 75 ? TIERS[2] : o >= 65 ? TIERS[1] : TIERS[0]; };
+  var OFF = {
+    ATT: { VIT: 5, TIR: 12, PAS: -4, DRI: 6, DEF: -18, ESP: -1 },
+    MIL: { VIT: -2, TIR: -2, PAS: 10, DRI: 6, DEF: -8, ESP: -4 },
+    DEF: { VIT: -4, TIR: -12, PAS: 0, DRI: -6, DEF: 16, ESP: 6 },
+    ALI: { VIT: 12, TIR: 2, PAS: 0, DRI: 8, DEF: -20, ESP: -2 },
+    GB: { VIT: -8, TIR: -14, PAS: -1, DRI: -6, DEF: 14, ESP: 15 }
+  };
+  /* Compo : avec gardien fixe (GB + 4 joueurs de champ) ou sans, le but est alors tournant. */
+  var KEEP = [{ r: 'GB', x: 50, y: 87 }, { r: 'DEF', x: 50, y: 63 }, { r: 'MIL', x: 26, y: 40 }, { r: 'ALI', x: 74, y: 40 }, { r: 'ATT', x: 50, y: 14 }];
+  var FREE = [{ r: 'ATT', x: 50, y: 14 }, { r: 'ALI', x: 24, y: 38 }, { r: 'MIL', x: 76, y: 38 }, { r: 'DEF', x: 30, y: 62 }, { r: 'DEF', x: 70, y: 62 }];
+  var FRIENDS = ['bu', 'ce', 'bfc'];
+  var WHEN = ['Dim. 1 nov · 11h', 'Sam. 7 nov · 14h', 'Dim. 8 nov · 11h', 'Sam. 14 nov · 14h'];
+
+  function statsFor(pos, tags) {
+    var st = {};
+    STATK.forEach(function (k) {
+      var up = tags.some(function (t) { return TAGS.filter(function (x) { return x.k === t; })[0].s === k; });
+      st[k] = 60 + Math.round(OFF[pos][k] / 2) - 2 + (up ? 6 : 0);
+    });
+    return st;
+  }
+
+  function mk(id, name, pos, ovr, team, matches, delta, extra) {
+    var stats = {};
+    STATK.forEach(function (k) { stats[k] = clamp(ovr + OFF[pos][k], 40, 99); });
+    var na = Math.round((5 + (ovr - 60) / 10) * 10) / 10;
+    var p = { id: id, name: name, pos: pos, ovr: ovr, team: team, matches: matches, delta: delta, stats: stats, notes: [na, na, na, na, na], rotate: true };
+    if (extra) { for (var k in extra) p[k] = extra[k]; }
+    return p;
+  }
+
+  function buildLineup(list, keeper) {
+    var slots = keeper ? KEEP : FREE, used = {}, out = [];
+    slots.forEach(function (s, i) {
+      var m = list.filter(function (p) { return !used[p.id] && p.pos === s.r; })[0];
+      if (m) { used[m.id] = 1; out[i] = m.id; }
+    });
+    slots.forEach(function (s, i) {
+      if (!out[i]) { var m = list.filter(function (p) { return !used[p.id]; })[0]; if (m) { used[m.id] = 1; out[i] = m.id; } }
+    });
+    return out;
+  }
+
+  function freshForm(list, mode, opp) {
+    var ratings = {};
+    list.filter(function (p) { return p.id !== 'me'; }).forEach(function (p) { ratings[p.id] = { note: 7, tags: [] }; });
+    return { mode: mode, opp: opp, sa: 5, sb: 3, ratings: ratings };
+  }
+  function freshOnb() { return { step: 0, photo: '', name: '', pos: 'MIL', rotate: true, tags: [], mode: 'join', code: 'CAGES-47', team: '', newCode: 'CINKO-7K2F' }; }
+
+  function fresh() {
+    var players = [
+      mk('me', 'Jordan P.', 'MIL', 73, 'cages', 9, 1, { stats: { VIT: 72, TIR: 70, PAS: 78, DRI: 74, DEF: 66, ESP: 80 }, notes: [7, 8, 6.5, 7.5, 8] }),
+      mk('nas', 'Nassim K.', 'GB', 69, 'cages', 9, 0),
+      mk('leo', 'Léo D.', 'DEF', 71, 'cages', 9, 0),
+      mk('meh', 'Mehdi A.', 'ALI', 76, 'cages', 8, 2),
+      mk('ila', 'Ilan T.', 'ATT', 77, 'cages', 9, 1),
+      mk('ray', 'Rayan B.', 'ATT', 82, 'bu', 8, 1),
+      mk('enz', 'Enzo C.', 'MIL', 79, 'ce', 8, 0),
+      mk('bil', 'Bilal Z.', 'DEF', 71, 'ce', 8, 0),
+      mk('ada', 'Adam R.', 'ATT', 69, 'ce', 7, 1),
+      mk('yan', 'Yanis L.', 'ALI', 67, 'ce', 8, 0),
+      mk('sof', 'Sofiane M.', 'DEF', 75, 'bfc', 8, -1),
+      mk('kar', 'Karim H.', 'ALI', 74, 'lf', 8, 1),
+      mk('theo', 'Théo B.', 'GB', 72, 'ce', 8, 0),
+      mk('jul', 'Jules R.', 'MIL', 70, 'bu', 7, -1),
+      mk('ani', 'Anis S.', 'ATT', 68, 'bfc', 8, 1),
+      mk('hug', 'Hugo F.', 'DEF', 66, 'rc', 8, 0),
+      mk('mal', 'Malik O.', 'MIL', 63, 'lf', 7, -1)
+    ];
+    var mine = players.filter(function (p) { return p.team === 'cages'; });
+    return {
+      players: players,
+      teams: {
+        cages: { name: 'Les Cages FC', city: 'Bussy-St-Georges', elo: 1552, m: 8, mm: 4, mo: 46, w: 5, d: 1, l: 2, gf: 36, ga: 23 },
+        bu: { name: 'Bitume United', city: 'Bussy-St-Georges', note: 77, elo: 1625, m: 8, mm: 3, mo: 12, w: 5, d: 2, l: 1, gf: 30, ga: 16, form: ['V', 'N', 'V', 'V', 'V'] },
+        ce: { name: 'Cinq Étoiles', city: 'Paris', note: 76, elo: 1590, m: 8, mm: 3, mo: 20, w: 5, d: 1, l: 2, gf: 28, ga: 19, form: ['V', 'N', 'V', 'D', 'V'] },
+        bfc: { name: 'Béton FC', city: 'Bussy-St-Georges', note: 71, elo: 1500, m: 8, mm: 2, mo: -8, w: 3, d: 2, l: 3, gf: 26, ga: 28, form: ['D', 'V', 'N', 'V', 'D'] },
+        lf: { name: 'Les Frappes', city: 'Paris', note: 69, elo: 1440, m: 8, mm: 2, mo: -15, w: 2, d: 1, l: 5, gf: 21, ga: 33, form: ['N', 'D', 'D', 'V', 'D'] },
+        rc: { name: 'Racing Cage', city: 'Bussy-St-Georges', note: 64, elo: 1370, m: 8, mm: 1, mo: -20, w: 0, d: 1, l: 7, gf: 14, ga: 36, form: ['D', 'D', 'N', 'D', 'D'] },
+        og: { name: 'Les Ombres', city: 'Lyon', note: 80, elo: 1710, m: 21, mm: 5, mo: 30, w: 15, d: 3, l: 3, gf: 88, ga: 41, form: ['V', 'V', 'N', 'V', 'V'] },
+        tv: { name: 'Terrain Vague', city: 'Paris', note: 68, elo: 1480, m: 12, mm: 2, mo: -4, w: 5, d: 2, l: 5, gf: 40, ga: 44, form: ['D', 'V', 'N', 'D', 'V'] },
+        fg: { name: 'Futsal Gang', city: 'Bussy-St-Georges', note: 72, elo: 1565, m: 15, mm: 3, mo: 9, w: 8, d: 3, l: 4, gf: 55, ga: 39, form: ['V', 'V', 'D', 'N', 'V'] },
+        nw: { name: 'Les Nouveaux', city: 'Bussy-St-Georges', note: 65, elo: 1500, m: 1, mm: 1, mo: 0, w: 1, d: 0, l: 0, gf: 6, ga: 4, form: ['V'] }
+      },
+      matches: [
+        { opp: 'rc', sa: 5, sb: 2, res: 'V', date: 'Sam. 24 oct', rk: false, meD: 1, team: true },
+        { opp: 'bfc', sa: 6, sb: 4, res: 'V', date: 'Jeu. 22 oct', rk: true, meD: 2, team: true },
+        { opp: 'lf', sa: 3, sb: 3, res: 'N', date: 'Jeu. 15 oct', rk: true, meD: 0, team: true },
+        { opp: 'rc', sa: 7, sb: 2, res: 'V', date: 'Jeu. 8 oct', rk: true, meD: 2, team: true },
+        { opp: 'ce', sa: 4, sb: 5, res: 'D', date: 'Jeu. 1 oct', rk: true, meD: -2, team: true },
+        { opp: 'bu', sa: 5, sb: 3, res: 'V', date: 'Jeu. 24 sept', rk: true, meD: 1, team: true }
+      ],
+      challenges: [
+        { id: 1, opp: 'bu', dir: 'in', when: 'Dim. 1 nov · 11h', place: 'Terrain à définir', status: 'todo' },
+        { id: 2, opp: 'ce', dir: 'out', when: 'Sam. 31 oct · 14h', place: 'Five du quartier', status: 'ok' },
+        { id: 3, opp: 'rc', dir: 'out', when: 'Sam. 24 oct', place: '', status: 'done', result: '5–2' }
+      ],
+      keeper: false,
+      lineup: buildLineup(mine, false),
+      sel: null,
+      lobby: { stage: 'lobby', mode: 'team', opp: 'ce', code: 'K7F4' },
+      form: freshForm(mine, 'classe', 'ce'),
+      chForm: { team: 'lf', when: WHEN[0], place: '' },
+      onb: freshOnb(),
+      rankTab: 'equipes', scope: 'general', help: 'none',
+      result: null,
+      sheet: null
+    };
+  }
+
+  var S = fresh();
+  var hasTeam = function () { return P('me').team === 'cages'; };
+  var P = function (id) { return S.players.filter(function (p) { return p.id === id; })[0]; };
+  var roster = function () { return S.players.filter(function (p) { return p.team === 'cages'; }); };
+  var LIBRE_A = ['me', 'nas', 'kar', 'hug', 'jul'], LIBRE_B = ['enz', 'theo', 'meh', 'sof', 'mal'];
+  function camps() {
+    var L = S.lobby;
+    if (L.mode === 'team' && hasTeam()) return { a: roster().map(function (p) { return p.id; }), b: S.players.filter(function (p) { return p.team === L.opp; }).map(function (p) { return p.id; }) };
+    return { a: LIBRE_A, b: LIBRE_B };
+  }
+  var mates = function () { return camps().a.filter(function (id) { return id !== 'me'; }).map(P); };
+  var tname = function (id) { return id === 'none' ? 'Joueur libre' : id === 'libre' ? 'Camp adverse' : S.teams[id].name; };
+  var teamNote = function (id) { return id === 'cages' ? Math.round(mean(roster().map(function (p) { return p.ovr; }))) : S.teams[id].note; };
+  var last5 = function (p) { return p.notes.length ? mean(p.notes.slice(-5)) : 0; };
+  function ranked() {
+    return S.players.slice().sort(function (a, b) { return b.ovr - a.ovr || last5(b) - last5(a) || a.name.localeCompare(b.name, 'fr'); });
+  }
+  var rankOf = function (id) { return ranked().map(function (p) { return p.id; }).indexOf(id) + 1; };
+  var oppIds = function () { return Object.keys(S.teams).filter(function (i) { return i !== 'cages'; }); };
+  function table() {
+    return Object.keys(S.teams).filter(function (i) { return S.teams[i].m >= 3; }).sort(function (a, b) {
+      return S.teams[b].elo - S.teams[a].elo || S.teams[a].name.localeCompare(S.teams[b].name, 'fr');
+    });
+  }
+  var lrank = function (id) { return table().indexOf(id) + 1; };
+  var inScope = function (id) {
+    if (S.scope === 'ville') return S.teams[id].city === S.teams.cages.city;
+    if (S.scope === 'amis') return id === 'cages' || FRIENDS.indexOf(id) > -1;
+    return true;
+  };
+  function eloDelta(opp, s) { var e = 1 / (1 + Math.pow(10, (S.teams[opp].elo - S.teams.cages.elo) / 400)); return Math.round(32 * (s - e)); }
+  var sd = function (d) { return d > 0 ? '+' + d : d < 0 ? '−' + (-d) : '±0'; };
+  var ordinal = function (n) { return n === 1 ? '1er' : n + 'e'; };
+  var formOf = function (id) { return id === 'cages' ? S.matches.slice(0, 5).map(function (m) { return m.res; }).reverse() : S.teams[id].form; };
+  var initials = function (n) {
+    var w = n.trim().split(/\s+/).filter(Boolean);
+    if (!w.length) return '?';
+    return (w.length > 1 ? w[0][0] + w[w.length - 1][0] : w[0].slice(0, 2)).toUpperCase().replace('.', '');
+  };
+
+  /* ---------- pieces ---------- */
+  function cardHTML(p, mini, extraClass) {
+    var t = tier(p.ovr);
+    var label = p.teamLabel || tname(p.team);
+    var stats = mini ? '' :
+      '<div class="c-stats">' + STATK.map(function (k) { return '<div class="c-stat">' + p.stats[k] + '<small>' + STATL[k] + '</small></div>'; }).join('') + '</div>' +
+      '<div class="c-foot">' + esc(label) + ' · Cinko</div>';
+    var shown = mini ? p.name.split(' ')[0] : p.name;
+    return '<div class="card-wrap ' + (mini ? 'mini' : 'full') + (extraClass ? ' ' + extraClass : '') + '">' +
+      '<div class="card t-' + t.k + '" role="img" aria-label="Carte de ' + esc(p.name) + ', note ' + p.ovr + ', ' + t.n + ', ' + POSN[p.pos] + '">' +
+      '<div class="shape"><div class="inner"><svg class="frame" viewBox="0 0 100 140" preserveAspectRatio="none" aria-hidden="true"><polygon points="3,3 91.2,3 97,8.8 97,137 8.8,137 3,131.2"/></svg>' +
+      '<div class="c-top"><div class="c-left"><div class="c-ovr">' + p.ovr + '</div><div class="c-pos">' + p.pos + '</div><div class="c-pips" aria-hidden="true">' + new Array(TIERS.indexOf(t) + 2).join('<i></i>') + '</div></div>' + (p.photo ? '<div class="c-photo"><img src="' + p.photo + '" alt=""></div>' : '<div class="c-init" aria-hidden="true">' + esc(initials(p.name)) + '</div>') + '</div>' +
+      '<div class="c-name">' + esc(shown) + '</div>' + stats +
+      '</div></div></div></div>';
+  }
+  function photoCtl(t) {
+    var has = t === 'me' ? P('me').photo : S.onb.photo;
+    return '<div class="photoctl"><span>Photo (facultatif)</span><div class="row2"><label class="btn sm ghost filebtn">' + (has ? 'Changer la photo' : 'Ajouter une photo') + '<input type="file" accept="image/*" data-photo="' + t + '" aria-label="Choisir une photo"></label>' + (has ? '<button type="button" class="btn sm ghost" data-act="photo-del" data-t="' + t + '">Retirer</button>' : '') + '</div></div>';
+  }
+  function handlePhoto(inp) {
+    var f = inp.files && inp.files[0], t = inp.dataset.photo; if (!f) return;
+    var rd = new FileReader();
+    rd.onload = function () {
+      var im = new Image();
+      im.onload = function () {
+        try {
+          var W = 360, H = 450, c = document.createElement('canvas'); c.width = W; c.height = H;
+          var x = c.getContext('2d'), s = Math.max(W / im.width, H / im.height), w = im.width * s, hh = im.height * s;
+          x.drawImage(im, (W - w) / 2, 0, w, hh);
+          var url = c.toDataURL('image/jpeg', 0.82);
+          if (t === 'me') P('me').photo = url; else S.onb.photo = url;
+          render();
+        } catch (e) { toast('Photo illisible, essaie une autre image'); }
+      };
+      im.onerror = function () { toast('Photo illisible, essaie une autre image'); };
+      im.src = rd.result;
+    };
+    rd.readAsDataURL(f);
+  }
+  var badge = function (o) { return '<span class="ovr-badge t-' + tier(o).k + '">' + o + '</span>'; };
+  var dots = function (a) { return '<span class="dots" aria-label="Derniers résultats">' + a.map(function (r) { return '<i class="dot d-' + r + '">' + r + '</i>'; }).join('') + '</span>'; };
+  var trend = function (d) { return d > 0 ? '<span class="trend up">▲ ' + d + '</span>' : d < 0 ? '<span class="trend dn">▼ ' + (-d) + '</span>' : '<span class="trend">—</span>'; };
+  var resWord = function (r) { return r === 'V' ? 'Victoire' : r === 'D' ? 'Défaite' : 'Match nul'; };
+  var oppOptions = function (sel) { return oppIds().map(function (id) { return '<option value="' + id + '"' + (id === sel ? ' selected' : '') + '>' + esc(tname(id)) + '</option>'; }).join(''); };
+  var pressed = function (v) { return ' aria-pressed="' + (v ? 'true' : 'false') + '"'; };
+
+  /* ---------- screens ---------- */
+  function historyPanel() {
+    return '<section class="panel"><div class="kicker">Mes derniers matchs</div><ul class="list">' + S.matches.slice(0, 5).map(function (m) {
+      return '<li class="mrow"><span class="d">' + m.date + '</span><span>' + (m.team === false ? 'Match libre' : 'vs ' + esc(tname(m.opp))) + '</span><span class="sc">' + m.sa + '–' + m.sb + '</span>' + trend(m.meD) + '</li>';
+    }).join('') + '</ul></section>';
+  }
+  function viewCarte() {
+    var me = P('me'), t = tier(me.ovr), nx = TIERS[TIERS.indexOf(t) + 1];
+    var pct = nx ? Math.round((me.ovr - t.min) / (nx.min - t.min) * 100) : 100;
+    var left = nx ? nx.min - me.ovr : 0;
+    var notes = me.notes.slice(-5), fm = formOf('cages').slice(-notes.length || 5);
+    var notesPanel = notes.length
+      ? '<section class="panel"><div class="head-row"><div class="kicker">Tes dernières notes</div><span class="avg">Moyenne ' + fmt(mean(notes)) + '</span></div>' +
+        '<div class="bars" style="grid-template-columns:repeat(' + notes.length + ',1fr)" role="img" aria-label="Notes des derniers matchs : ' + notes.map(fmt).join(', ') + '">' +
+        notes.map(function (n, i) { return '<div class="bar' + (i === notes.length - 1 ? ' last' : '') + '"><span class="v">' + fmt(n) + '</span><div class="col" style="height:' + Math.round(n * 8) + 'px"></div><i class="dot d-' + fm[i] + '">' + fm[i] + '</i></div>'; }).join('') +
+        '</div></section>'
+      : '<section class="panel"><div class="kicker">Tes notes</div><p class="muted" style="margin:0">Aucune note pour l’instant. Après ton premier match, tes coéquipiers te notent et ta carte évolue.</p></section>';
+    return '<div><p class="kicker">' + (hasTeam() ? esc(tname('cages')) + ' · niveau ' + S.teams.cages.elo : 'Joueur libre · ' + POSN[me.pos]) + '</p><h1 class="screen-title">Ma carte</h1></div>' +
+      '<div id="cardSlot">' + cardHTML(me) + '</div>' +
+      '<section class="panel tierbar"><div class="tb-top"><b>' + t.n + '</b><span>' + (nx ? nx.n + ' à ' + nx.min : 'Niveau maximum') + '</span></div>' +
+      '<div class="prog" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="' + pct + '" aria-label="Progression vers ' + (nx ? nx.n : t.n) + '"><i style="width:' + pct + '%"></i></div>' +
+      '<p class="muted small"><a href="#niveaux">Voir les 4 niveaux de carte</a></p><p class="muted small" style="margin-top:4px">' + (nx ? 'Plus que ' + left + ' point' + (left > 1 ? 's' : '') + ' pour passer ' + nx.n + '.' : 'Tu es au sommet de la ligue.') + '</p></section>' +
+      notesPanel + historyPanel() +
+      '<section class="panel"><div class="kicker">Ton profil</div>' +
+      '<label class="field"><span>Nom sur la carte</span><input id="nameInput" type="text" maxlength="14" value="' + esc(me.name) + '" autocomplete="off"></label>' +
+      '<div class="field"><span id="posLbl">Poste préféré</span><div class="seg" role="group" aria-labelledby="posLbl">' +
+      POS.map(function (p) { return '<button type="button" data-act="pos" data-v="' + p + '"' + pressed(me.pos === p) + '>' + p + '</button>'; }).join('') +
+      '</div></div>' +
+      photoCtl('me') + '<label class="check"><input id="rotateChk" type="checkbox"' + (me.rotate ? ' checked' : '') + '><span>OK pour tourner au but</span></label>' +
+      '<p class="muted small">' + (me.pos === 'GB' ? 'Tu es inscrit comme gardien : ton capitaine peut te mettre au but fixe. ' : '') + 'Ta carte et tes notes sont publiques : toute la ligue les voit.</p></section>' +
+      '<a class="btn block" href="#match">Noter un match</a><button type="button" class="btn ghost block" data-act="share-card" style="margin-top:10px">Partager ma carte</button>';
+  }
+
+  function helpPanel() {
+    var body;
+    if (S.help === 'none') body = '<p class="muted small" style="margin:0">Il vous manque un joueur ce soir ? On prévient les joueurs proches de chez vous.</p><div class="row2"><button type="button" class="btn sm" data-act="help">Chercher un joueur</button></div>';
+    else if (S.help === 'sent') body = '<p class="muted small" style="margin:0">Notification envoyée à 12 joueurs proches. En attente d’une réponse…</p>';
+    else if (S.help === 'offer') body = '<div class="loan">' + badge(72) + '<div class="who"><b>Samir B.</b><small>MIL · Béton FC · propose de dépanner</small></div></div><div class="row2"><button type="button" class="btn sm" data-act="help-ok">Accepter</button><button type="button" class="btn sm ghost" data-act="help-no">Refuser</button></div>';
+    else body = '<div class="loan">' + badge(72) + '<div class="who"><b>Samir B. joue avec vous</b><small>Prêt de Béton FC · garde sa carte et son niveau</small></div></div><p class="muted small" style="margin:0">Le résultat compte pour ' + esc(tname('cages')) + '. Il reçoit ses notes de votre équipe.</p>';
+    return '<section class="panel help"><div class="kicker" style="margin:0">Renfort</div>' + body + '</section>';
+  }
+
+  function emptyTeam(title) {
+    return '<div><p class="kicker">Sans équipe</p><h1 class="screen-title">' + title + '</h1></div><section class="panel"><p class="lede" style="margin:0 0 14px">Tu joues avec des équipes différentes ? C’est très bien : ta carte évolue à chaque match, avec ou sans équipe. Une équipe te donne en plus un classement à plusieurs, des défis et un terrain de jeu commun.</p><button type="button" class="btn block" data-act="join-team">Rejoindre Les Cages FC (démo)</button></section>';
+  }
+  function viewEquipe() { return hasTeam() ? viewEquipeTeam() : emptyTeam('Équipe'); }
+  function viewEquipeTeam() {
+    var T = S.teams.cages, slots = S.keeper ? KEEP : FREE, sel = S.sel, r = lrank('cages');
+    var cards = slots.map(function (s, i) {
+      var p = P(S.lineup[i]);
+      return '<button type="button" class="slot" data-act="slot" data-i="' + i + '"' + pressed(sel === i) + ' style="left:' + s.x + '%;top:' + s.y + '%" aria-label="' + esc(p.name) + ', ' + POSN[p.pos] + (sel === i ? ', sélectionné' : '') + '">' + cardHTML(p, true) + '</button>';
+    }).join('');
+    var bar = sel !== null
+      ? '<div class="lineup-bar"><span><b>' + esc(P(S.lineup[sel]).name) + '</b> sélectionné. Touche une autre carte pour échanger.</span><button type="button" class="btn sm ghost" data-act="open" data-id="' + S.lineup[sel] + '">Voir la carte</button></div>'
+      : '<p class="hint">Touche deux cartes pour les échanger.</p>';
+    var shy = roster().filter(function (p) { return !p.rotate; }).map(function (p) { return p.name; });
+    var gk = S.keeper
+      ? '<p class="hint"><b style="color:var(--chalk)">' + esc(P(S.lineup[0]).name) + '</b> garde les cages. Les quatre autres jouent sur le terrain.</p>'
+      : '<p class="hint">Pendant le match, tout le monde passe au but à tour de rôle.' + (shy.length ? ' Préfère ne pas y aller : ' + esc(shy.join(', ')) + '.' : '') + '</p>';
+    return '<div><p class="kicker">Équipe de 5 · ' + esc(T.city) + '</p><h1 class="screen-title">' + esc(T.name) + '</h1></div>' +
+      '<section class="teamhead"><div class="bignum"><span>' + teamNote('cages') + '</span><small>Note générale</small></div>' +
+      '<div class="rec"><div class="line"><span><b>' + T.w + '</b>V</span><span><b>' + T.d + '</b>N</span><span><b>' + T.l + '</b>D</span></div><small>' + (r ? '#' + r + ' au classement · ' : '') + 'niveau ' + T.elo + '</small>' + dots(formOf('cages')) + '</div></section>' +
+      '<div><div class="kicker">Compo</div><div class="seg" role="group" aria-label="Gardien">' +
+      '<button type="button" data-act="keeper" data-v="off"' + pressed(!S.keeper) + '>Gardien tournant</button><button type="button" data-act="keeper" data-v="on"' + pressed(S.keeper) + '>Gardien fixe</button></div></div>' +
+      '<div><div class="pitch"><svg class="lines" viewBox="0 0 100 125" aria-hidden="true"><g fill="none" stroke="rgba(236,233,223,.32)" stroke-width=".6"><rect x="3" y="3" width="94" height="119"/><line x1="3" y1="62.5" x2="97" y2="62.5"/><circle cx="50" cy="62.5" r="11"/><rect x="25" y="3" width="50" height="19"/><rect x="25" y="103" width="50" height="19"/><rect x="39" y="3" width="22" height="7"/><rect x="39" y="115" width="22" height="7"/></g></svg>' +
+      cards + (S.keeper ? '' : '<div class="goalpill">↻ Tout le monde au but</div>') + '</div>' + bar + gk + '</div>' +
+      helpPanel() +
+      '<section class="panel"><div class="kicker">Derniers matchs</div><ul class="list">' +
+      S.matches.filter(function (m) { return m.team !== false; }).slice(0, 5).map(function (m) { return '<li class="mrow"><span class="d">' + m.date + '</span><span>vs ' + esc(tname(m.opp)) + '</span><span class="sc">' + m.sa + '–' + m.sb + '</span><i class="dot d-' + m.res + '">' + m.res + '</i></li>'; }).join('') +
+      '</ul></section>';
+  }
+
+  function rateRow(p) {
+    var r = S.form.ratings[p.id];
+    return '<div class="rate"><div class="rate-head">' + badge(p.ovr) + '<div class="who"><b>' + esc(p.name) + '</b><small>' + POSN[p.pos] + '</small></div><output class="rate-val" id="out-' + p.id + '">' + fmt(r.note) + '</output></div>' +
+      '<input type="range" min="1" max="10" step="0.5" value="' + r.note + '" data-rate="' + p.id + '" aria-label="Note pour ' + esc(p.name) + '">' +
+      '<div class="chips" role="group" aria-label="Points forts de ' + esc(p.name) + '">' +
+      TAGS.map(function (t) { return '<button type="button" class="chip" data-act="tag" data-id="' + p.id + '" data-t="' + t.k + '"' + pressed(r.tags.indexOf(t.k) > -1) + '>' + t.k + '</button>'; }).join('') +
+      '</div></div>';
+  }
+
+  function campCol(title, ids, total) {
+    var rows = ids.map(function (id) {
+      var p = P(id);
+      return '<li class="prow">' + badge(p.ovr) + '<span class="who"><b>' + esc(p.name) + (id === 'me' ? '<span class="me-tag">TOI</span>' : '') + '</b><small>' + p.pos + ' · ' + esc(p.team === 'none' ? 'sans équipe' : tname(p.team)) + '</small></span></li>';
+    });
+    for (var i = ids.length; i < total; i++) rows.push('<li class="prow wait"><span class="ph"></span><span class="who"><b>En attente…</b></span></li>');
+    return '<div class="camp"><h3>' + esc(title) + '</h3><ul>' + rows.join('') + '</ul></div>';
+  }
+  function viewMatch() {
+    if (S.result) return viewResult();
+    var L = S.lobby, C = camps(), team = L.mode === 'team' && hasTeam();
+    if (!hasTeam()) L.mode = 'libre';
+    var nameA = team ? tname('cages') : 'Camp A', nameB = team ? tname(L.opp) : 'Camp B';
+    if (L.stage === 'lobby') {
+      return '<div><p class="kicker">Nouveau match</p><h1 class="screen-title">Lancer un match</h1><p class="lede">Envoie le lien. Chaque joueur rejoint son camp, avec ou sans équipe.</p></div>' +
+        '<section class="panel"><div class="kicker">Lien du match</div><div class="codebox" style="margin-top:0"><code style="font-size:20px">cinko.app/m/' + L.code + '</code><button type="button" class="btn sm ghost" data-act="copy-match">Copier</button></div></section>' +
+        '<section class="panel">' +
+        (hasTeam() ? '<div class="seg" role="group" aria-label="Type de camps"><button type="button" data-act="preset" data-v="team"' + pressed(team) + '>Équipe contre équipe</button><button type="button" data-act="preset" data-v="libre"' + pressed(!team) + '>Match libre</button></div>' : '') +
+        (team ? '<label class="field"><span>Équipe adverse</span><select id="oppSel">' + oppOptions(L.opp) + '</select></label>' : '') +
+        '<div class="camps">' + campCol(nameA, C.a, 5) + campCol(nameB, C.b, 5) + '</div>' +
+        '<p class="muted small">' + (team ? 'Deux équipes complètes : le match compte aussi pour le classement des équipes.' : 'Match libre : les camps sont mélangés. Les cartes évoluent, le classement des équipes ne bouge pas.') + '</p></section>' +
+        '<button type="button" class="btn block" data-act="lobby-go">Match terminé : saisir le score</button>';
+    }
+    var f = S.form, opp = team ? L.opp : 'libre';
+    var res = f.sa > f.sb ? 'V' : f.sa < f.sb ? 'D' : 'N';
+    var step = function (side, label) { return '<div class="stepper"><button type="button" data-act="score" data-side="' + side + '" data-d="-1" aria-label="Retirer un but ' + label + '">−</button><output aria-live="polite">' + f[side] + '</output><button type="button" data-act="score" data-side="' + side + '" data-d="1" aria-label="Ajouter un but ' + label + '">+</button></div>'; };
+    var info = '<p class="muted small">Un joueur du camp adverse doit confirmer le score pour que le match compte.</p>' +
+      (team ? '<div class="deltas"><span>Victoire <b>' + sd(eloDelta(opp, 1)) + '</b></span><span>Nul <b>' + sd(eloDelta(opp, 0.5)) + '</b></span><span>Défaite <b>' + sd(eloDelta(opp, 0)) + '</b></span></div><p class="muted small" style="margin-top:6px">Variation du niveau d’équipe. Plus l’adversaire est fort, plus la victoire rapporte.</p>' : '');
+    return '<div><p class="kicker">Après le coup de sifflet</p><h1 class="screen-title">Noter le match</h1></div>' +
+      '<section class="panel"><div class="score"><div class="side"><span class="tname">' + esc(nameA) + '</span>' + step('sa', 'pour ton camp') + '</div><div class="sep">–</div><div class="side"><span class="tname">' + esc(nameB) + '</span>' + step('sb', 'pour l’autre camp') + '</div></div>' +
+      '<p class="verdict ' + res + '">' + resWord(res) + '</p>' + info + '</section>' +
+      '<section class="panel"><div class="kicker">Note les joueurs de ton camp</div><p class="muted small" style="margin:0 0 8px">De 1 à 10. Choisis jusqu’à 2 points forts. Tes notes restent anonymes, tu ne peux pas te noter toi-même, et une note très éloignée de celles des autres est écartée. Une carte varie de 3 points maximum par match.</p>' +
+      '<div class="rate-list">' + mates().map(rateRow).join('') + '</div></section>' +
+      '<button type="button" class="btn block" data-act="submit">Valider les notes</button>' +
+      '<button type="button" class="btn ghost block" data-act="lobby-back">Retour au lobby</button>';
+  }
+
+  function viewResult() {
+    var R = S.result, me = P('me'), up = R.before.tier.k !== R.after.tier.k;
+    var facts = R.ranked
+      ? '<div><dt>Niveau de l’équipe</dt><dd>' + R.elo.b + ' → ' + R.elo.a + ' (' + sd(R.elo.d) + ')</dd></div><div><dt>Classement général</dt><dd>#' + R.before.lrank + ' → #' + R.after.lrank + '</dd></div>'
+      : '';
+    var pend = '<p class="pend' + (R.confirmed ? ' ok' : '') + '">' + (R.confirmed ? 'Score confirmé par ' + esc(R.oppName) : 'Score envoyé à ' + esc(R.oppName) + ' · en attente de confirmation') + '</p>';
+    return '<div><p class="kicker">' + 'Match enregistré</p><h1 class="screen-title">' + resWord(R.res) + '</h1></div>' +
+      '<section class="panel res-banner"><div class="big">' + R.sa + ' – ' + R.sb + '</div><div class="tn">' + esc(R.sideName) + ' contre ' + esc(R.oppLabel) + '</div>' + pend + '</section>' +
+      '<section>' + (up ? (TIERS.indexOf(R.after.tier) > TIERS.indexOf(R.before.tier) ? '<div class="tierup">Passage en ' + R.after.tier.n + '</div>' : '<div class="tierup down">Retour en ' + R.after.tier.n + '</div>') : '<div class="delta">' + R.me.old + ' → ' + R.me.now + ' (' + sd(R.me.d) + ')</div>') +
+      '<div class="reveal">' + cardHTML(me) + '</div>' +
+      '<p class="muted small" style="text-align:center">Notes reçues : ' + R.me.votes.map(fmt).join(' · ') + ' (moyenne ' + fmt(R.me.avg) + '). ' + (R.me.dropped ? R.me.dropped + ' note écartée : trop éloignée des autres. ' : '') + 'Les notes sont anonymes. Stats en hausse : ' + R.me.gain.map(function (s) { return '+1 ' + STATL[s]; }).join(', ') + '.</p></section>' +
+      '<button type="button" class="btn block" data-act="share-result">Partager le résultat</button>' +
+      '<section class="panel"><div class="kicker">Tes coéquipiers</div><div>' +
+      R.rows.map(function (r) { return '<div class="rrow"><div class="who"><b>' + esc(r.p) + '</b><small>Ta note ' + fmt(r.note) + (r.tags.length ? ' · ' + r.tags.join(', ') : '') + '</small></div><span>' + r.old + ' <span class="arrow">→</span> ' + r.now + '</span>' + trend(r.d) + '</div>'; }).join('') +
+      '</div></section>' +
+      '<section class="panel"><dl class="facts"><div><dt>Ton rang parmi les joueurs</dt><dd>#' + R.before.rank + ' → #' + R.after.rank + '</dd></div>' + (R.ranked ? '<div><dt>Note générale de l’équipe</dt><dd>' + R.before.team + ' → ' + R.after.team + '</dd></div>' : '') + facts + '</dl>' +
+      (R.ranked ? '<p class="muted small">La variation de niveau est provisoire jusqu’à la confirmation de l’adversaire.</p>' : '') +
+      '<p class="muted small">Démo : les notes que tu reçois sont simulées. Dans l’app, tes coéquipiers te notent après chaque match.</p></section>' +
+      '<div class="actions"><a class="btn" href="#carte">Voir ma carte</a><button type="button" class="btn ghost" data-act="again">Lancer un autre match</button></div>';
+  }
+
+  function viewTable() {
+    var T = table().filter(inScope), cal = Object.keys(S.teams).filter(function (i) { return S.teams[i].m < 3 && inScope(i); });
+    var awardsOf = function (k) { return Object.keys(S.teams).filter(function (i) { return S.teams[i].m >= 3; }).sort(function (a, b) { return S.teams[b][k] - S.teams[a][k]; })[0]; };
+    var rows = T.map(function (id, i) {
+      var t = S.teams[id];
+      return '<tr' + (id === 'cages' ? ' class="me"' : '') + '><td>' + (i + 1) + '</td><td><b>' + esc(t.name) + (id === 'cages' ? '<span class="me-tag">TOI</span>' : '') + '</b><small>' + esc(t.city) + ' · ' + t.w + 'V ' + t.d + 'N ' + t.l + 'D</small></td><td>' + t.m + '</td><td class="pts">' + t.elo + '</td></tr>';
+    }).join('');
+    var calib = cal.length
+      ? '<section class="panel"><div class="kicker">En calibrage</div><p class="muted small" style="margin:0 0 6px">Moins de 3 matchs : l’équipe entre au classement après son troisième match.</p><ul class="list">' + cal.map(function (id) { var t = S.teams[id]; return '<li class="mrow" style="grid-template-columns:minmax(0,1fr) auto"><span><b>' + esc(t.name) + '</b><br><span class="d">' + esc(t.city) + '</span></span><span class="d">' + t.m + ' match' + (t.m > 1 ? 's' : '') + '</span></li>'; }).join('') + '</ul></section>'
+      : '';
+    return '<div class="seg" role="group" aria-label="Portée du classement"><button type="button" data-act="scope" data-v="general"' + pressed(S.scope === 'general') + '>Général</button><button type="button" data-act="scope" data-v="ville"' + pressed(S.scope === 'ville') + '>Ma ville</button><button type="button" data-act="scope" data-v="amis"' + pressed(S.scope === 'amis') + '>Mes adversaires</button></div>' +
+      '<section class="panel" style="padding:12px 10px"><table class="lt"><caption class="kicker" style="text-align:left;padding:0 6px 8px">Classement par niveau</caption><thead><tr><th scope="col">#</th><th scope="col">Équipe</th><th scope="col">M</th><th scope="col">Niveau</th></tr></thead><tbody>' + rows + '</tbody></table></section>' +
+      '<p class="legend">Le niveau monte quand tu gagnes, surtout contre plus fort que toi. Jouer peu ne fait pas baisser le niveau.</p>' + calib +
+      '<section class="panel"><div class="kicker">Saison d’octobre · fin dans 3 jours</div><ul class="awards"><li><span>Meilleur niveau</span><b>' + esc(tname(awardsOf('elo'))) + '</b></li><li><span>Plus active</span><b>' + esc(tname(awardsOf('mm'))) + '</b></li><li><span>Plus belle progression</span><b>' + esc(tname(awardsOf('mo'))) + '</b></li></ul><p class="muted small">Pas de calendrier ni de descente. Chaque mois, des cartes spéciales récompensent les équipes actives et celles qui progressent.</p></section>';
+  }
+
+  function viewCartes() {
+    return '<section class="panel" style="padding:8px 10px"><ul class="list">' + ranked().map(function (p, i) {
+      var mine = p.id === 'me';
+      return '<li><button type="button" class="row' + (mine ? ' me' : '') + '" data-act="open" data-id="' + p.id + '" aria-label="Carte de ' + esc(p.name) + '"><span class="rank">' + (i + 1) + '</span>' + badge(p.ovr) +
+        '<span class="who"><b>' + esc(p.name) + (mine ? '<span class="me-tag">TOI</span>' : '') + '</b><small>' + p.pos + ' · ' + esc(tname(p.team)) + '</small></span>' + trend(p.delta) + '</button></li>';
+    }).join('') + '</ul></section><p class="hint">Les notes sont publiques. Touche une ligne pour voir la carte.</p>';
+  }
+
+  function viewClass() {
+    var tab = S.rankTab;
+    return '<div><p class="kicker">Classement Cinko</p><h1 class="screen-title">Classement</h1></div>' +
+      '<div class="seg" role="group" aria-label="Type de classement"><button type="button" data-act="tab" data-v="equipes"' + pressed(tab === 'equipes') + '>Équipes</button><button type="button" data-act="tab" data-v="joueurs"' + pressed(tab === 'joueurs') + '>Cartes</button></div>' +
+      (tab === 'equipes' ? viewTable() : viewCartes());
+  }
+
+  var STATUS = { todo: 'À répondre', wait: 'En attente', ok: 'Confirmé', done: 'Terminé' };
+  function viewDefis() {
+    if (!hasTeam()) return emptyTeam('Défis');
+    var c = S.chForm;
+    return '<div><p class="kicker">Matchs entre équipes</p><h1 class="screen-title">Défis</h1><p class="lede">Un défi est un match comme les autres : les cartes évoluent et le classement bouge.</p></div>' +
+      '<section class="panel"><div class="kicker">Cherche un adversaire</div><p class="muted small" style="margin:0 0 10px">Préviens les équipes de niveau proche : la première qui répond joue contre toi.</p><button type="button" class="btn block" data-act="seek">On cherche une équipe</button></section>' +
+      '<section class="panel"><div class="kicker">Ou défie une équipe</div>' +
+      '<label class="field"><span>Équipe à défier</span><select id="chTeam">' + oppOptions(c.team) + '</select></label>' +
+      '<label class="field"><span>Quand</span><select id="chWhen">' + WHEN.map(function (w) { return '<option' + (w === c.when ? ' selected' : '') + '>' + w + '</option>'; }).join('') + '</select></label>' +
+      '<label class="field"><span>Lieu</span><input id="chPlace" type="text" maxlength="40" placeholder="Terrain à définir" value="' + esc(c.place) + '" autocomplete="off"></label>' +
+      '<div style="margin-top:14px"><button type="button" class="btn block" data-act="send">Envoyer le défi</button></div></section>' +
+      '<section class="panel" style="padding-top:6px;padding-bottom:6px"><ul class="list">' +
+      S.challenges.map(function (x) {
+        var actions = '';
+        if (x.status === 'todo') actions = '<div class="ch-actions"><button type="button" class="btn sm" data-act="accept" data-id="' + x.id + '">Accepter</button><button type="button" class="btn sm ghost" data-act="decline" data-id="' + x.id + '">Refuser</button></div>';
+        if (x.status === 'ok') actions = '<div class="ch-actions"><button type="button" class="btn sm" data-act="play" data-id="' + x.id + '">Jouer ce match</button></div>';
+        return '<li class="ch"><div class="ch-top"><div class="who"><small>' + (x.dir === 'in' ? 'Défi reçu de' : 'Défi lancé à') + '</small><b>' + esc(tname(x.opp)) + '</b><small>' + esc(x.when) + (x.place ? ' · ' + esc(x.place) : '') + '</small></div><span class="status ' + x.status + '">' + STATUS[x.status] + (x.result ? ' · ' + x.result : '') + '</span></div>' + actions + '</li>';
+      }).join('') + '</ul></section>';
+  }
+
+  /* ---------- inscription ---------- */
+  function draft() {
+    var o = S.onb;
+    return {
+      id: 'draft', photo: o.photo, name: o.name.trim() || 'Ton nom', pos: o.pos, ovr: 60, stats: statsFor(o.pos, o.tags), team: 'cages',
+      teamLabel: o.step >= 3 ? (o.mode === 'none' ? 'Joueur libre' : o.mode === 'create' ? (o.team.trim() || 'Ton équipe') : tname('cages')) : 'Nouvelle carte'
+    };
+  }
+  function onbValid() {
+    var o = S.onb;
+    if (o.step === 0) return o.name.trim().length >= 2;
+    if (o.step === 2) return o.tags.length === 2;
+    if (o.step === 3) return o.mode === 'none' ? true : o.mode === 'join' ? o.code.trim().toUpperCase() === 'CAGES-47' : o.team.trim().length >= 2;
+    return true;
+  }
+  function updateOnbUI() {
+    var o = S.onb, b = $('#onbNext'); if (b) b.disabled = !onbValid();
+    var p = $('#previewSlot'); if (p) p.innerHTML = cardHTML(draft(), false, 'preview');
+    var m = $('#codeMsg');
+    if (m && o.mode === 'join') {
+      var c = o.code.trim().toUpperCase();
+      if (!c) { m.className = 'msg'; m.textContent = ''; }
+      else if (c === 'CAGES-47') { m.className = 'msg ok'; m.textContent = 'Les Cages FC · 4 joueurs · Niveau 1552'; }
+      else { m.className = 'msg err'; m.textContent = 'Code inconnu. Pour la démo, utilise CAGES-47.'; }
+    }
+  }
+
+  function viewOnb() {
+    var o = S.onb, s = o.step;
+    if (s === 4) {
+      var d = draft();
+      return '<div class="onb-top"><div class="steps" role="img" aria-label="Inscription terminée"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i></div></div>' +
+        '<div><p class="kicker">Bienvenue dans la ligue</p><h1 class="screen-title">Ta carte est prête</h1></div>' +
+        '<div class="reveal">' + cardHTML(d) + '</div>' +
+        '<section class="panel"><div class="kicker">Comment monter</div><ol class="how"><li><span>1</span>Joue un match de ligue ou un défi.</li><li><span>2</span>Tes coéquipiers te notent de 1 à 10 après le match.</li><li><span>3</span>Ta carte évolue : Cuivre, Argent, Or, puis Légende.</li></ol>' +
+        '<p class="muted small">Tout le monde démarre à 60. Tes points forts donnent la forme de ta carte, pas son niveau.</p></section>' +
+        '<div class="actions"><button type="button" class="btn ghost" data-act="onb-back">Modifier</button><button type="button" class="btn" data-act="onb-finish">Entrer dans la ligue</button></div>';
+    }
+    var titles = ['Nom et photo', 'Ton poste', 'Tes points forts', 'Ton équipe'];
+    var ledes = [
+      'Le nom s’affiche sur ta carte, comme sur un maillot. La photo est facultative.',
+      'Au five, tout le monde tourne souvent au but. Le poste sert surtout à composer l’équipe.',
+      'Choisis-en 2. Tout le monde démarre à 60 : ça donne la forme de ta carte, pas son niveau.',
+      'Rejoins ta bande avec un code, crée l’équipe, ou joue sans équipe fixe : ta carte évolue dans tous les cas.'
+    ];
+    var body;
+    if (s === 0) {
+      body = '<label class="field" style="margin-top:0"><span>Nom sur la carte</span><input id="onbName" type="text" maxlength="14" placeholder="Prénom + initiale" value="' + esc(o.name) + '" autocomplete="off"></label><p class="muted small">14 caractères maximum. Ta carte est visible des autres joueurs.</p>' + photoCtl('onb');
+    } else if (s === 1) {
+      body = '<div class="opts">' + POS.map(function (p) {
+        return '<button type="button" class="opt" data-act="onb-pos" data-v="' + p + '"' + pressed(o.pos === p) + '><span class="code">' + p + '</span><span><b>' + POSN[p] + '</b><small>' + POSD[p] + '</small></span></button>';
+      }).join('') + '</div><label class="check"><input id="onbRotate" type="checkbox"' + (o.rotate ? ' checked' : '') + '><span>OK pour tourner au but avec les autres</span></label>';
+    } else if (s === 2) {
+      body = '<div class="optgrid">' + TAGS.map(function (t) {
+        return '<button type="button" class="opt" data-act="onb-tag" data-t="' + t.k + '"' + pressed(o.tags.indexOf(t.k) > -1) + '><span><b>' + t.k + '</b><small>Stat ' + STATL[t.s] + ' en plus</small></span></button>';
+      }).join('') + '</div><p class="muted small">' + o.tags.length + ' sur 2 choisis.</p>';
+    } else {
+      body = '<div class="seg" role="group" aria-label="Rejoindre ou créer"><button type="button" data-act="onb-mode" data-v="join"' + pressed(o.mode === 'join') + '>J’ai un code</button><button type="button" data-act="onb-mode" data-v="create"' + pressed(o.mode === 'create') + '>Je crée l’équipe</button><button type="button" data-act="onb-mode" data-v="none"' + pressed(o.mode === 'none') + '>Sans équipe</button></div>' +
+        (o.mode === 'none' ? '<p class="muted" style="margin-top:12px">Parfait : tu joues avec des équipes différentes. Ta carte évolue à chaque match grâce aux notes des joueurs de ton camp. Tu pourras rejoindre ou créer une équipe quand tu veux.</p>' : o.mode === 'join'
+          ? '<label class="field"><span>Code d’invitation</span><input id="onbCode" type="text" maxlength="10" value="' + esc(o.code) + '" autocomplete="off" autocapitalize="characters"></label><p id="codeMsg" class="msg" aria-live="polite"></p>'
+          : '<label class="field"><span>Nom de l’équipe</span><input id="onbTeam" type="text" maxlength="20" placeholder="Les Cages FC" value="' + esc(o.team) + '" autocomplete="off"></label>' +
+            '<div class="codebox"><code id="newCode">' + o.newCode + '</code><button type="button" class="btn sm ghost" data-act="copy">Copier</button></div>' +
+            '<p class="muted small">Envoie ce code à 4 potes : une équipe compte 5 joueurs. Dans la démo, ils sont déjà là.</p>');
+    }
+    var nextLabel = s === 3 ? (o.mode === 'join' ? 'Rejoindre l’équipe' : o.mode === 'none' ? 'Continuer' : 'Créer l’équipe') : 'Continuer';
+    return '<div class="onb-top"><div class="steps" role="img" aria-label="Étape ' + (s + 1) + ' sur 4">' + [0, 1, 2, 3].map(function (i) { return '<i' + (i <= s ? ' class="on"' : '') + '></i>'; }).join('') + '</div><button type="button" class="linkbtn" data-act="quit">Quitter</button></div>' +
+      '<div><p class="kicker">Étape ' + (s + 1) + ' sur 4</p><h1 class="screen-title" style="margin-bottom:8px">' + titles[s] + '</h1><p class="lede">' + ledes[s] + '</p></div>' +
+      '<div class="onb-card"><div id="previewSlot">' + cardHTML(draft(), false, 'preview') + '</div></div>' +
+      '<section class="panel">' + body + '</section>' +
+      '<div class="actions' + (s > 0 ? '' : ' solo') + '">' + (s > 0 ? '<button type="button" class="btn ghost" data-act="onb-back">Retour</button>' : '') + '<button type="button" id="onbNext" class="btn" data-act="onb-next"' + (onbValid() ? '' : ' disabled') + '>' + nextLabel + '</button></div>';
+  }
+
+  var TDESC = { cuivre: 'De 60 à 64. Tout le monde démarre ici.', argent: 'De 65 à 74. Les joueurs réguliers.', or: 'De 75 à 84. Le haut du panier.', legende: 'À partir de 85. Carte sombre et dorée qui brille.' };
+  function viewNiveaux() {
+    var me = P('me'), shown = S.tierPrev || tier(me.ovr).k;
+    var cells = TIERS.map(function (t) {
+      var o = { cuivre: 62, argent: 70, or: 80, legende: 90 }[t.k], st = {};
+      STATK.forEach(function (k) { st[k] = clamp(me.stats[k] + (o - me.ovr), 40, 99); });
+      var p = { id: 'demo', name: me.name, pos: me.pos, ovr: o, stats: st, team: 'cages', photo: me.photo };
+      return '<button type="button" class="tcell" data-act="tierprev" data-v="' + t.k + '"' + pressed(shown === t.k) + ' aria-label="Aperçu niveau ' + t.n + '">' + cardHTML(p) + '<b>' + t.n + '</b><small>' + TDESC[t.k] + '</small></button>';
+    }).join('');
+    return '<div><p class="kicker">Évolution</p><h1 class="screen-title">Les 4 niveaux</h1><p class="lede">Ta carte change de matière et l’ambiance de l’app change avec elle. Touche un niveau pour voir le fond.</p></div>' +
+      '<div class="tgrid">' + cells + '</div><a class="btn ghost block" href="#carte">Retour à ma carte</a>';
+  }
+
+  var ROUTES = { niveaux: viewNiveaux, carte: viewCarte, equipe: viewEquipe, match: viewMatch, classement: viewClass, defis: viewDefis, inscription: viewOnb };
+  var route = function () { var h = location.hash.slice(1); return ROUTES[h] ? h : 'carte'; };
+
+  function renderSheet() {
+    var el = $('#sheet');
+    if (!S.sheet) { el.innerHTML = ''; return; }
+    if (S.sheet === 'share') {
+      el.innerHTML = '<div class="sheet" role="dialog" aria-modal="true" aria-label="Image à partager"><button type="button" class="sheet-bg" data-act="close" aria-label="Fermer"></button><div class="sheet-in"><img class="shareimg" src="' + S.shareImg + '" alt="Image de partage Cinko"><button type="button" class="btn block" data-act="native-share">Partager</button><p>Ou maintiens l’image pour l’enregistrer.</p><button type="button" class="btn ghost" data-act="close">Fermer</button></div></div>';
+      return;
+    }
+    var p = P(S.sheet), nt = p.notes.length ? 'note publique ' + fmt(last5(p)) : 'pas encore de note';
+    el.innerHTML = '<div class="sheet" role="dialog" aria-modal="true" aria-label="Carte de ' + esc(p.name) + '"><button type="button" class="sheet-bg" data-act="close" aria-label="Fermer"></button><div class="sheet-in">' +
+      cardHTML(p) + '<p>' + esc(tname(p.team)) + ' · ' + POSN[p.pos] + ' · ' + p.matches + ' matchs · ' + nt + '</p><button type="button" class="btn ghost" data-act="close">Fermer</button></div></div>';
+    var b = el.querySelector('.btn'); if (b) b.focus();
+  }
+
+  function render(top) {
+    var y = window.scrollY, r = route();
+    document.body.classList.toggle('onb', r === 'inscription');
+    if (r !== 'niveaux') S.tierPrev = null;
+    document.body.dataset.tier = S.tierPrev || tier(P('me').ovr).k;
+    $('#view').innerHTML = ROUTES[r]();
+    document.querySelectorAll('.tab').forEach(function (a) { if (a.dataset.r === r) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });
+    renderSheet();
+    if (r === 'inscription') updateOnbUI();
+    window.scrollTo(0, top ? 0 : y);
+  }
+
+  var tt;
+  function toast(m) { var t = $('#toast'); t.textContent = m; t.classList.add('on'); clearTimeout(tt); tt = setTimeout(function () { t.classList.remove('on'); }, 2800); }
+
+  /* ---------- logic ---------- */
+  function addResult(id, gf, ga) {
+    var t = S.teams[id];
+    t[gf > ga ? 'w' : gf < ga ? 'l' : 'd']++;
+    t.gf += gf; t.ga += ga; t.m++; t.mm++;
+    t.form = t.form.slice(-4).concat(gf > ga ? 'V' : gf < ga ? 'D' : 'N');
+  }
+
+  function applyMatch() {
+    var f = S.form, L = S.lobby, rk = L.mode === 'team' && hasTeam(), opp = rk ? L.opp : 'libre';
+    var res = f.sa > f.sb ? 'V' : f.sa < f.sb ? 'D' : 'N', mod = res === 'V' ? 0.5 : res === 'D' ? -0.5 : 0;
+    var me = P('me');
+    var before = { rank: rankOf('me'), tier: tier(me.ovr), team: teamNote('cages'), lrank: lrank('cages') };
+    var rows = [];
+    mates().forEach(function (p) {
+      var r = f.ratings[p.id], d = clamp(Math.round((r.note - 6.5) * 1.1 + mod), -3, 3), old = p.ovr;
+      p.ovr = clamp(old + d, 40, 99);
+      r.tags.forEach(function (t) { var s = TAGS.filter(function (x) { return x.k === t; })[0].s; p.stats[s] = Math.min(99, p.stats[s] + 1); });
+      p.matches++; p.delta = d; p.notes.push(r.note);
+      rows.push({ p: p.name, note: r.note, tags: r.tags.slice(), old: old, now: p.ovr, d: d });
+    });
+    var base = res === 'V' ? 8 : res === 'N' ? 7.5 : 6.5;
+    var all = [base + 0.5, base, base - 0.5, clamp(base - 5, 1, 10)];
+    var med = all.slice().sort(function (u, v) { return u - v; }); med = (med[1] + med[2]) / 2;
+    var votes = all.filter(function (v) { return Math.abs(v - med) <= 2.5; });
+    var dropped = all.length - votes.length;
+    var avg = Math.round(mean(votes) * 10) / 10;
+    var d = clamp(Math.round((avg - 6.5) * 1.1 + mod), -3, 3), old = me.ovr;
+    me.ovr = clamp(old + d, 40, 99);
+    var gain = res === 'D' ? ['ESP'] : ['PAS', 'ESP'];
+    gain.forEach(function (s) { me.stats[s] = Math.min(99, me.stats[s] + 1); });
+    me.matches++; me.delta = d; me.notes.push(avg);
+    var T = S.teams.cages, eb = T.elo, dE = 0;
+    if (rk) {
+      dE = eloDelta(opp, res === 'V' ? 1 : res === 'N' ? 0.5 : 0);
+      T.elo += dE; T.mo += dE; S.teams[opp].elo -= dE; S.teams[opp].mo -= dE;
+      T[res === 'V' ? 'w' : res === 'N' ? 'd' : 'l']++; T.gf += f.sa; T.ga += f.sb; T.m++; T.mm++;
+      addResult(opp, f.sb, f.sa);
+      var ch = S.challenges.filter(function (c) { return c.opp === opp && c.status === 'ok'; })[0];
+      if (ch) { ch.status = 'done'; ch.result = f.sa + '–' + f.sb; }
+    }
+    S.matches.unshift({ opp: opp, sa: f.sa, sb: f.sb, res: res, date: 'Aujourd’hui', rk: rk, team: rk, meD: d });
+    S.result = {
+      res: res, sa: f.sa, sb: f.sb, opp: opp, rows: rows, ranked: rk, confirmed: false,
+      sideName: rk ? tname('cages') : 'Ton camp', oppLabel: rk ? tname(opp) : 'Camp adverse', oppName: rk ? tname(opp) : 'le camp adverse',
+      me: { dropped: dropped, avg: avg, old: old, now: me.ovr, d: d, gain: gain, votes: votes },
+      elo: { b: eb, a: T.elo, d: dE },
+      before: before, after: { rank: rankOf('me'), tier: tier(me.ovr), team: teamNote('cages'), lrank: lrank('cages') }
+    };
+  }
+
+  /* ---------- partage : image générée dans le navigateur ---------- */
+  var TCOL = { cuivre: ['#e0a672', '#8c5629', '#2b1709'], argent: ['#eef1f7', '#8b94aa', '#161a26'], or: ['#ffe08a', '#c28a20', '#2b1c04'], legende: ['#f0b33c', '#7a4f0c', '#fff4d0'] };
+  var DISP = '"Big Shoulders Display","Arial Narrow",Impact,sans-serif';
+  function drawCard(x, p, cx, y, w, img) {
+    var h = w * 1.4, l = cx - w / 2, c = TCOL[tier(p.ovr).k], ch = w * 0.09;
+    var g = x.createLinearGradient(l, y, l + w, y + h); g.addColorStop(0, c[0]); g.addColorStop(1, c[1]);
+    x.beginPath(); x.moveTo(l, y); x.lineTo(l + w - ch, y); x.lineTo(l + w, y + ch); x.lineTo(l + w, y + h); x.lineTo(l + ch, y + h); x.lineTo(l, y + h - ch); x.closePath();
+    x.fillStyle = g; x.fill();
+    if (img) { x.save(); x.clip(); var rw = w * 0.64, rh = h * 0.62, s = Math.max(rw / img.width, rh / img.height); x.drawImage(img, l + w * 0.36 + (rw - img.width * s) / 2, y + w * 0.02, img.width * s, img.height * s); x.restore(); }
+    x.save(); x.globalAlpha = 0.4; x.strokeStyle = c[2]; x.lineWidth = Math.max(2, w * 0.006); var fi = w * 0.03; x.beginPath();
+    x.moveTo(l + fi, y + fi); x.lineTo(l + w - ch - fi * 0.4, y + fi); x.lineTo(l + w - fi, y + ch + fi * 0.4); x.lineTo(l + w - fi, y + h - fi); x.lineTo(l + ch + fi * 0.4, y + h - fi); x.lineTo(l + fi, y + h - ch - fi * 0.4); x.closePath(); x.stroke(); x.restore();
+    x.fillStyle = c[2]; x.textAlign = 'left';
+    x.font = '900 ' + w * 0.26 + 'px ' + DISP; x.fillText(String(p.ovr), l + w * 0.07, y + w * 0.3);
+    x.font = '800 ' + w * 0.07 + 'px ' + DISP; x.fillText(p.pos, l + w * 0.08, y + w * 0.4);
+    if (!img) { x.globalAlpha = 0.15; x.textAlign = 'right'; x.font = '900 ' + w * 0.6 + 'px ' + DISP; x.fillText(initials(p.name), l + w * 0.97, y + h * 0.62); x.globalAlpha = 1; }
+    x.textAlign = 'center'; x.font = '800 ' + w * 0.1 + 'px ' + DISP; x.fillText(p.name.toUpperCase(), cx, y + h * 0.74);
+    x.font = '800 ' + w * 0.07 + 'px ' + DISP;
+    STATK.forEach(function (k, i) { x.fillText(p.stats[k] + ' ' + STATL[k], l + w * (0.2 + (i % 3) * 0.3), y + h * (0.84 + Math.floor(i / 3) * 0.08)); });
+  }
+  function shareCanvas(kind, img) {
+    var c = document.createElement('canvas'); c.width = 1080; c.height = 1350;
+    var x = c.getContext('2d'); if (!x) return null;
+    var bg = x.createLinearGradient(0, 0, 0, 1350); bg.addColorStop(0, '#1a1f2b'); bg.addColorStop(1, '#0d1017');
+    x.fillStyle = bg; x.fillRect(0, 0, 1080, 1350);
+    var gl = x.createRadialGradient(540, 0, 0, 540, 0, 700); gl.addColorStop(0, 'rgba(240,179,60,.28)'); gl.addColorStop(1, 'rgba(240,179,60,0)');
+    x.fillStyle = gl; x.fillRect(0, 0, 1080, 1350);
+    x.textAlign = 'center'; x.fillStyle = '#ece9df'; x.font = '900 64px ' + DISP; x.fillText('CINK', 520, 110);
+    x.fillStyle = '#f0b33c'; x.fillText('O', 598, 110);
+    var me = P('me');
+    if (kind === 'result' && S.result) {
+      var R = S.result;
+      x.fillStyle = R.res === 'V' ? '#53d08a' : R.res === 'D' ? '#ea6350' : '#8e97ab'; x.font = '800 54px ' + DISP; x.fillText(resWord(R.res).toUpperCase(), 540, 220);
+      x.fillStyle = '#ece9df'; x.font = '900 240px ' + DISP; x.fillText(R.sa + ' – ' + R.sb, 540, 440);
+      x.fillStyle = '#8e97ab'; x.font = '700 38px sans-serif'; x.fillText(R.sideName + ' contre ' + R.oppLabel, 540, 510);
+      drawCard(x, me, 540, 570, 312, img);
+      if (R.ranked) { x.fillStyle = '#ece9df'; x.font = '800 44px ' + DISP; x.fillText('NIVEAU ' + R.elo.b + ' → ' + R.elo.a + ' (' + sd(R.elo.d) + ')', 540, 1250); }
+    } else {
+      x.fillStyle = '#8e97ab'; x.font = '700 38px sans-serif'; x.fillText(hasTeam() ? tname('cages') + ' · niveau ' + S.teams.cages.elo : 'Joueur libre', 540, 200);
+      drawCard(x, me, 540, 260, 640, img);
+    }
+    x.fillStyle = '#8e97ab'; x.font = '600 30px sans-serif'; x.fillText('Rejoins la ligue Cinko', 540, 1310);
+    return c.toDataURL('image/png');
+  }
+  function openShare(kind) {
+    var done = function (img) {
+      var url = null; try { url = shareCanvas(kind, img); } catch (e) { url = null; }
+      if (!url) { toast('Image indisponible dans ce navigateur'); return; }
+      S.shareImg = url; S.sheet = 'share'; renderSheet();
+    };
+    var ph = P('me').photo;
+    if (ph) { var im = new Image(); im.onload = function () { done(im); }; im.onerror = function () { done(null); }; im.src = ph; } else done(null);
+  }
+
+  function finishOnb() {
+    var o = S.onb, d = draft();
+    var me = { id: 'me', photo: o.photo, name: o.name.trim(), pos: o.pos, ovr: 60, team: o.mode === 'none' ? 'none' : 'cages', matches: 0, delta: 0, stats: d.stats, notes: [], rotate: o.rotate };
+    S.players = S.players.map(function (p) { return p.id === 'me' ? me : p; });
+    if (o.mode === 'create') S.teams.cages.name = o.team.trim();
+    if (o.mode !== 'none') S.lineup = buildLineup(roster(), S.keeper);
+    S.rankTab = o.mode === 'none' ? 'joueurs' : 'equipes'; S.lobby.mode = o.mode === 'none' ? 'libre' : 'team'; S.lobby.stage = 'lobby';
+    S.sel = null; S.result = null; S.form = freshForm(roster(), S.form.mode, S.form.opp);
+    S.onb = freshOnb();
+  }
+
+  function copyCode() {
+    var code = S.onb.newCode;
+    var done = function () { toast('Code copié : ' + code); };
+    var fail = function () { var el = $('#newCode'); if (el && window.getSelection) { var r = document.createRange(); r.selectNodeContents(el); var s = window.getSelection(); s.removeAllRanges(); s.addRange(r); } toast('Sélectionné : copie le code ' + code); };
+    try { navigator.clipboard.writeText(code).then(done, fail); } catch (e) { fail(); }
+  }
+
+  /* ---------- events ---------- */
+  document.addEventListener('click', function (e) {
+    var b = e.target.closest ? e.target.closest('[data-act]') : null;
+    if (!b || b.disabled) return;
+    var a = b.dataset.act, id = b.dataset.id;
+    if (a === 'pos') { P('me').pos = b.dataset.v; render(); }
+    else if (a === 'keeper') { S.keeper = b.dataset.v === 'on'; S.lineup = buildLineup(roster(), S.keeper); S.sel = null; render(); }
+    else if (a === 'slot') {
+      var i = Number(b.dataset.i);
+      if (S.sel === null) S.sel = i;
+      else if (S.sel === i) S.sel = null;
+      else { var tmp = S.lineup[S.sel]; S.lineup[S.sel] = S.lineup[i]; S.lineup[i] = tmp; S.sel = null; }
+      render();
+    }
+    else if (a === 'mode') { S.form.mode = b.dataset.v; render(); }
+    else if (a === 'scope') { S.scope = b.dataset.v; render(); }
+    else if (a === 'score') { var k = b.dataset.side; S.form[k] = clamp(S.form[k] + Number(b.dataset.d), 0, 20); render(); }
+    else if (a === 'tag') {
+      var r = S.form.ratings[id], ix = r.tags.indexOf(b.dataset.t);
+      if (ix > -1) r.tags.splice(ix, 1); else { r.tags.push(b.dataset.t); if (r.tags.length > 2) r.tags.shift(); }
+      render();
+    }
+    else if (a === 'submit') {
+      applyMatch(); render(true);
+      var R = S.result;
+      if (R.ranked) setTimeout(function () { if (S.result === R) { R.confirmed = true; toast(tname(R.opp) + ' a confirmé le score'); if (route() === 'match') render(); } }, 2200);
+    }
+    else if (a === 'again') { S.result = null; S.lobby.stage = 'lobby'; render(true); }
+    else if (a === 'tab') { S.rankTab = b.dataset.v; render(); }
+    else if (a === 'open') { S.sheet = id; renderSheet(); }
+    else if (a === 'close') { S.sheet = null; renderSheet(); }
+    else if (a === 'send') {
+      var c = S.chForm, nid = Date.now();
+      S.challenges.unshift({ id: nid, opp: c.team, dir: 'out', when: c.when, place: c.place.trim() || 'Terrain à définir', status: 'wait' });
+      c.place = ''; render(); toast('Défi envoyé à ' + tname(c.team));
+      setTimeout(function () {
+        var x = S.challenges.filter(function (y) { return y.id === nid; })[0];
+        if (x && x.status === 'wait') { x.status = 'ok'; toast(tname(x.opp) + ' a accepté le défi'); if (route() === 'defis') render(); }
+      }, 2500);
+    }
+    else if (a === 'accept') { var x1 = S.challenges.filter(function (y) { return String(y.id) === id; })[0]; if (x1) { x1.status = 'ok'; toast('Défi confirmé contre ' + tname(x1.opp)); render(); } }
+    else if (a === 'decline') { S.challenges = S.challenges.filter(function (y) { return String(y.id) !== id; }); toast('Défi refusé'); render(); }
+    else if (a === 'play') { var x2 = S.challenges.filter(function (y) { return String(y.id) === id; })[0]; if (x2) { S.lobby.opp = x2.opp; S.lobby.mode = 'team'; S.lobby.stage = 'lobby'; S.result = null; location.hash = 'match'; } }
+    else if (a === 'reset') { S = fresh(); render(true); toast('Démo réinitialisée'); }
+    else if (a === 'onb-pos') { S.onb.pos = b.dataset.v; render(); }
+    else if (a === 'onb-tag') {
+      var tg = S.onb.tags, ti = tg.indexOf(b.dataset.t);
+      if (ti > -1) tg.splice(ti, 1); else { tg.push(b.dataset.t); if (tg.length > 2) tg.shift(); }
+      render();
+    }
+    else if (a === 'onb-mode') { S.onb.mode = b.dataset.v; render(); }
+    else if (a === 'onb-next') { if (onbValid()) { S.onb.step++; render(true); } }
+    else if (a === 'onb-back') { S.onb.step = Math.max(0, S.onb.step - (S.onb.step === 4 ? 4 : 1)); render(true); }
+    else if (a === 'onb-finish') { finishOnb(); location.hash = 'carte'; toast('Bienvenue dans la ligue'); }
+    else if (a === 'quit') { S.onb = freshOnb(); location.hash = 'carte'; }
+    else if (a === 'copy') { copyCode(); }
+    else if (a === 'copy-match') { var lk = 'cinko.app/m/' + S.lobby.code; try { navigator.clipboard.writeText(lk).then(function () { toast('Lien copié : ' + lk); }, function () { toast('Lien : ' + lk); }); } catch (e) { toast('Lien : ' + lk); } }
+    else if (a === 'preset') { S.lobby.mode = b.dataset.v; render(); }
+    else if (a === 'lobby-go') { S.form = freshForm(mates(), 'x', null); S.lobby.stage = 'play'; render(true); }
+    else if (a === 'lobby-back') { S.lobby.stage = 'lobby'; render(true); }
+    else if (a === 'join-team') { P('me').team = 'cages'; S.lineup = buildLineup(roster(), S.keeper); S.lobby.mode = 'team'; S.rankTab = 'equipes'; render(true); toast('Bienvenue chez Les Cages FC'); }
+    else if (a === 'tierprev') { S.tierPrev = b.dataset.v; render(); }
+    else if (a === 'photo-del') { if (b.dataset.t === 'me') P('me').photo = ''; else S.onb.photo = ''; render(); }
+    else if (a === 'help') {
+      S.help = 'sent'; render(); toast('Notification envoyée aux joueurs proches');
+      setTimeout(function () { if (S.help === 'sent') { S.help = 'offer'; toast('Samir B. propose de dépanner'); if (route() === 'equipe') render(); } }, 2500);
+    }
+    else if (a === 'help-ok') { S.help = 'ok'; render(); }
+    else if (a === 'help-no') { S.help = 'none'; render(); }
+    else if (a === 'seek') {
+      var have = S.challenges.map(function (c) { return c.opp; });
+      var pick = oppIds().filter(function (i) { return S.teams[i].m >= 3 && have.indexOf(i) < 0; }).sort(function (u, v) { return Math.abs(S.teams[u].elo - S.teams.cages.elo) - Math.abs(S.teams[v].elo - S.teams.cages.elo); })[0];
+      toast('Notification envoyée aux équipes de niveau proche');
+      if (pick) setTimeout(function () { S.challenges.unshift({ id: Date.now(), opp: pick, dir: 'in', when: 'Sam. 7 nov · 14h', place: 'Terrain à définir', status: 'todo' }); toast(tname(pick) + ' veut jouer contre vous'); if (route() === 'defis') render(); }, 2200);
+    }
+    else if (a === 'share-card') { openShare('card'); }
+    else if (a === 'share-result') { openShare('result'); }
+    else if (a === 'native-share') {
+      try {
+        fetch(S.shareImg).then(function (r) { return r.blob(); }).then(function (bl) {
+          var f = new File([bl], 'cinko.png', { type: 'image/png' });
+          if (navigator.canShare && navigator.canShare({ files: [f] })) return navigator.share({ files: [f] });
+          toast('Maintiens l’image pour l’enregistrer');
+        }).catch(function () { toast('Maintiens l’image pour l’enregistrer'); });
+      } catch (e) { toast('Maintiens l’image pour l’enregistrer'); }
+    }
+  });
+
+  document.addEventListener('input', function (e) {
+    var t = e.target;
+    if (t.dataset && t.dataset.rate) {
+      var v = Number(t.value); S.form.ratings[t.dataset.rate].note = v;
+      var o = document.getElementById('out-' + t.dataset.rate); if (o) o.textContent = fmt(v);
+    } else if (t.id === 'nameInput') {
+      P('me').name = t.value.trim() ? t.value : 'Joueur';
+      var s = $('#cardSlot'); if (s) s.innerHTML = cardHTML(P('me'));
+    } else if (t.id === 'chPlace') { S.chForm.place = t.value; }
+    else if (t.id === 'onbName') { S.onb.name = t.value; updateOnbUI(); }
+    else if (t.id === 'onbCode') { S.onb.code = t.value; updateOnbUI(); }
+    else if (t.id === 'onbTeam') { S.onb.team = t.value; updateOnbUI(); }
+  });
+
+  document.addEventListener('change', function (e) {
+    var t = e.target;
+    if (t.dataset && t.dataset.photo) { handlePhoto(t); return; }
+    if (t.id === 'oppSel') { S.lobby.opp = t.value; render(); }
+    else if (t.id === 'chTeam') S.chForm.team = t.value;
+    else if (t.id === 'chWhen') S.chForm.when = t.value;
+    else if (t.id === 'rotateChk') P('me').rotate = t.checked;
+    else if (t.id === 'onbRotate') S.onb.rotate = t.checked;
+  });
+
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && S.sheet) { S.sheet = null; renderSheet(); } });
+
+  document.addEventListener('pointermove', function (e) {
+    if (REDUCED || !e.target.closest) return;
+    var w = e.target.closest('.card-wrap.full'); if (!w) return;
+    var c = w.querySelector('.card'), r = c.getBoundingClientRect();
+    var x = (e.clientX - r.left) / r.width, y = (e.clientY - r.top) / r.height;
+    c.style.setProperty('--ry', ((x - 0.5) * 14) + 'deg');
+    c.style.setProperty('--rx', ((0.5 - y) * 10) + 'deg');
+    c.style.setProperty('--sx', (130 - x * 160) + '%');
+  });
+  document.addEventListener('pointerout', function (e) {
+    if (!e.target.closest) return;
+    var w = e.target.closest('.card-wrap.full');
+    if (w && !w.contains(e.relatedTarget)) {
+      var c = w.querySelector('.card');
+      c.style.removeProperty('--rx'); c.style.removeProperty('--ry'); c.style.removeProperty('--sx');
+    }
+  });
+
+  window.addEventListener('hashchange', function () { S.sheet = null; if (route() === 'inscription' && S.onb.step === 4) S.onb = freshOnb(); render(true); });
+  render(true);
+})();
+</script>
