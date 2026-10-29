@@ -66,7 +66,8 @@ const S = {
   ready: false, session: null, profile: null, team: null, members: [],
   authMode: 'login', msg: '', busy: false,
   onb: { step: 0, name: '', pos: 'MIL', rotate: true, tags: [], photo: '' },
-  teamMode: 'create', teamMsg: ''
+  teamMode: 'create', teamMsg: '',
+  mlist: [], match: null, mmsg: ''
 };
 const draftCard = () => ({
   name: S.onb.name.trim() || 'Ton nom', pos: S.onb.pos, ovr: 60, stats: statsFor(S.onb.pos, S.onb.tags), photo_url: S.onb.photo, teamLabel: 'Nouvelle carte'
@@ -79,6 +80,8 @@ function tr(err) {
   if (/already registered|already been registered/i.test(m)) return 'Ce compte existe déjà : connecte-toi.';
   if (/at least \d+ characters|weak/i.test(m)) return 'Mot de passe trop court (6 caractères minimum).';
   if (/valid email|invalid format|Unable to validate email/i.test(m)) return 'Adresse e-mail invalide.';
+  if (/row-level security/i.test(m)) return 'Action non autorisée.';
+  if (/duplicate key/i.test(m)) return 'Déjà fait.';
   if (/rate limit|too many/i.test(m)) return 'Trop de tentatives. Réessaie dans quelques minutes.';
   if (/Failed to fetch|NetworkError|Load failed/i.test(m)) return 'Pas de connexion. Réessaie.';
   return m || 'Une erreur est survenue.';
@@ -102,13 +105,13 @@ async function loadProfile() {
 }
 async function afterSession() {
   try { await loadProfile(); S.msg = ''; } catch (e) { S.msg = tr(e); }
-  S.ready = true; render(true); checkTierUp(); previewTierUp();
+  S.ready = true; await route(); checkTierUp();
 }
 
 /* ---------- vues ---------- */
 function viewAuth() {
   const login = S.authMode === 'login';
-  return `<div><p class="kicker">Ta carte se gagne sur le terrain.</p><h1 class="screen-title">${login ? 'Connexion' : 'Crée ton compte'}</h1><p class="lede">${login ? 'Retrouve ta carte et ton équipe.' : 'Ta carte démarre à 60 et évolue match après match.'}</p></div>` +
+  return `<div><p class="kicker">${curCode() ? 'Tu es invité à un match' : 'Ta carte se gagne sur le terrain.'}</p><h1 class="screen-title">${login ? 'Connexion' : 'Crée ton compte'}</h1><p class="lede">${login ? 'Retrouve ta carte et ton équipe.' : 'Ta carte démarre à 60 et évolue match après match.'}</p></div>` +
     '<form id="authForm" class="panel" autocomplete="on">' +
     '<label class="field" style="margin-top:0"><span>E-mail</span><input id="email" type="email" inputmode="email" autocomplete="email" autocapitalize="none" required></label>' +
     `<label class="field"><span>Mot de passe</span><input id="password" type="password" autocomplete="${login ? 'current-password' : 'new-password'}" minlength="6" required></label>` +
@@ -183,7 +186,7 @@ function viewEquipe() {
     `<button type="button" class="btn block" data-act="${create ? 'team-create' : 'team-join'}" ${S.busy ? 'disabled' : ''}>${create ? 'Créer l’équipe' : 'Rejoindre'}</button></section>`;
 }
 
-const tabNow = () => (location.hash === '#equipe' ? 'equipe' : 'carte');
+const tabNow = () => (location.hash === '#equipe' ? 'equipe' : /^#m(atch)?(\/|$)/.test(location.hash) ? 'match' : 'carte');
 
 function render(top) {
   const y = window.scrollY, view = $('#view');
@@ -194,7 +197,7 @@ function render(top) {
   if (!S.ready) view.innerHTML = '<p class="muted" style="text-align:center;margin-top:60px">Chargement…</p>';
   else if (!authed) view.innerHTML = viewAuth();
   else if (!hasProfile) view.innerHTML = viewOnb();
-  else view.innerHTML = tabNow() === 'equipe' ? viewEquipe() : viewCarte();
+  else { const t = tabNow(); view.innerHTML = t === 'equipe' ? viewEquipe() : t === 'match' ? (curCode() ? viewMatch() : viewMatchList()) : viewCarte(); }
   document.querySelectorAll('.tab').forEach((a) => (a.dataset.tab === tabNow() ? a.setAttribute('aria-current', 'page') : a.removeAttribute('aria-current')));
   window.scrollTo(0, top ? 0 : y);
 }
@@ -275,6 +278,127 @@ function previewTierUp() {
   location.hash = '#carte'; tierUp({ ...myCard(), ovr: TIERS[i].min }, TIERS[i - 1].k, k);
 }
 
+/* ---------- matchs ---------- */
+const MSTAT = { open: 'En préparation', scored: 'Score entré', confirmed: 'Score confirmé', done: 'Terminé' };
+const mlink = (c) => location.origin + location.pathname + '#m/' + c;
+function curCode() { const m = /^#m\/([A-Za-z0-9]{3,8})$/.exec(location.hash); return m ? m[1].toUpperCase() : null; }
+const sgn = (d) => (d > 0 ? '+' + d : String(d));
+
+async function loadMatches() {
+  const { data, error } = await sb.from('matches').select('*').order('created_at', { ascending: false }).limit(15);
+  if (error) throw error;
+  S.mlist = data || [];
+}
+async function loadMatch(code, keep) {
+  const picks = keep && S.match ? S.match.picks : {};
+  S.match = null; S.mmsg = '';
+  const r = await sb.from('matches').select('*').eq('code', code).maybeSingle();
+  if (r.error) throw r.error;
+  if (!r.data) { S.match = { code, m: null, players: [], rated: new Set(), picks: {} }; return; }
+  const m = r.data;
+  const pl = await sb.from('match_players').select('user_id,camp,delta').eq('match_id', m.id);
+  if (pl.error) throw pl.error;
+  const ids = (pl.data || []).map((x) => x.user_id);
+  const pr = ids.length ? await sb.from('profiles').select('*').in('id', ids) : { data: [] };
+  if (pr.error) throw pr.error;
+  const byId = {}; (pr.data || []).forEach((x) => (byId[x.id] = x));
+  const rt = await sb.rpc('my_ratings', { p_match: m.id });
+  S.match = {
+    code, m, picks,
+    players: pl.data.filter((x) => byId[x.user_id]).map((x) => ({ ...byId[x.user_id], camp: x.camp, delta: x.delta })),
+    rated: new Set((rt.data || []).map((x) => x.rated_id))
+  };
+}
+async function route() {
+  if (S.session && S.profile) {
+    try {
+      const c = curCode();
+      if (c) await loadMatch(c, !!(S.match && S.match.code === c));
+      else if (location.hash === '#match') { S.mmsg = ''; await loadMatches(); }
+    } catch (e) { S.mmsg = tr(e); }
+  }
+  render(true); previewTierUp();
+}
+async function mact(fn, okMsg) {
+  const code = S.match.code;
+  S.mmsg = ''; S.busy = true; render();
+  try {
+    const { error } = await fn();
+    if (error) throw error;
+    await loadMatch(code, true);
+    if (okMsg) toast(okMsg);
+  } catch (e) { S.mmsg = tr(e); if (!S.match) S.match = { code, m: null, players: [], rated: new Set(), picks: {} }; }
+  S.busy = false; render();
+}
+
+function viewMatchList() {
+  const rows = S.mlist.map((m) => {
+    const sc = m.score_a != null ? ` · ${m.score_a}–${m.score_b}` : '';
+    return `<a class="mrow" href="#m/${esc(m.code)}"><code>${esc(m.code)}</code><span>${MSTAT[m.status]}${sc}</span><small>${new Date(m.created_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}</small></a>`;
+  }).join('');
+  return '<div><p class="kicker">Foot à 5, avec ou sans équipe</p><h1 class="screen-title">Match</h1><p class="lede">Lance un match, envoie le lien à tes potes : chacun choisit son camp. Après le match, les joueurs de chaque camp se notent entre eux et les cartes évoluent.</p></div>' +
+    `<p class="msg ${S.mmsg ? 'err' : ''}" role="alert">${esc(S.mmsg)}</p>` +
+    `<button type="button" class="btn block" data-act="newmatch" ${S.busy ? 'disabled' : ''}>Lancer un match</button>` +
+    '<section class="panel"><div class="kicker">Tu as un code ?</div><div class="row2"><input id="joinCode" type="text" maxlength="8" placeholder="Code du match" autocapitalize="characters" autocomplete="off"><button type="button" class="btn ghost" data-act="gocode">Ouvrir</button></div></section>' +
+    `<section><div class="kicker">Mes matchs</div>${rows ? `<div class="mlist">${rows}</div>` : '<p class="muted">Aucun match pour l’instant.</p>'}</section>`;
+}
+
+function campHTML(M, c) {
+  const list = M.players.filter((p) => p.camp === c), me = S.session.user.id, done = M.m.status === 'done';
+  const mine = list.some((p) => p.id === me);
+  return `<section class="panel camp"><div class="tb-top"><b>Camp ${c.toUpperCase()}</b><span>${mine ? 'Ton camp' : ''}</span></div>` +
+    (list.length ? '<div class="roster">' + list.map((p) => `<div class="cw">${cardHTML({ ...p, teamLabel: '' }, true)}${done && p.delta != null ? `<span class="delta ${p.delta > 0 ? 'up' : p.delta < 0 ? 'down' : ''}">${sgn(p.delta)}</span>` : ''}</div>`).join('') + '</div>' : '<p class="muted small">Personne pour l’instant.</p>') + '</section>';
+}
+
+function viewMatch() {
+  const M = S.match;
+  if (!M) return `<p class="muted" style="text-align:center;margin-top:60px">${esc(S.mmsg || 'Chargement…')}</p>`;
+  const head = (t) => `<div><p class="kicker">Match ${esc(M.code)}</p><h1 class="screen-title">${t}</h1></div>`;
+  const err = `<p class="msg ${S.mmsg ? 'err' : ''}" role="alert">${esc(S.mmsg)}</p>`;
+  const me = S.session.user.id, m = M.m;
+  if (!m || !M.players.some((p) => p.id === me)) {
+    return head('Rejoindre le match') + '<p class="lede">Choisis ton camp. Tu pourras en changer tant que le match n’a pas commencé.</p>' + err +
+      `<div class="actions" style="grid-template-columns:1fr 1fr"><button type="button" class="btn" data-act="join" data-c="a" ${S.busy ? 'disabled' : ''}>Camp A</button><button type="button" class="btn" data-act="join" data-c="b" ${S.busy ? 'disabled' : ''}>Camp B</button></div>` +
+      '<p class="muted small">Si le match est déjà lancé ou introuvable, demande un nouveau lien à celui qui l’a créé.</p>';
+  }
+  const mine = M.players.find((p) => p.id === me), other = mine.camp === 'a' ? 'b' : 'a';
+  const scorer = m.scored_by && M.players.find((p) => p.id === m.scored_by);
+  const hasScore = m.score_a != null;
+  let out = head(MSTAT[m.status]) + campHTML(M, 'a') + campHTML(M, 'b');
+  if (hasScore) out += `<section class="panel scoreshow"><span>${m.score_a}</span><i>–</i><span>${m.score_b}</span></section>`;
+
+  if (m.status === 'open') {
+    out += `<section class="panel"><div class="kicker">Invite tes potes</div><div class="codebox" style="margin-top:0"><code>${esc(M.code)}</code><div class="row2"><button type="button" class="btn sm" data-act="share-match">Partager le lien</button></div></div><p class="muted small">Ils cliquent, se connectent et choisissent leur camp. Les adversaires n’ont pas besoin de l’appli pour que ton camp soit noté.</p><button type="button" class="btn sm ghost" data-act="join" data-c="${other}" style="margin-top:10px">Passer dans le camp ${other.toUpperCase()}</button></section>`;
+  }
+  if (m.status === 'open' || (m.status === 'scored' && m.scored_by === me)) {
+    out += `<section class="panel"><div class="kicker">${m.status === 'open' ? 'Match fini ? Entre le score' : 'Corriger le score'}</div><div class="scorebox"><label class="field" style="margin:0"><span>Camp A</span><input id="sa" type="number" inputmode="numeric" min="0" max="99" value="${m.score_a ?? ''}"></label><i>–</i><label class="field" style="margin:0"><span>Camp B</span><input id="sb" type="number" inputmode="numeric" min="0" max="99" value="${m.score_b ?? ''}"></label></div>${err}<button type="button" class="btn block" data-act="score" ${S.busy ? 'disabled' : ''}>Enregistrer le score</button></section>`;
+  }
+  if (m.status === 'scored') {
+    if (scorer && scorer.camp !== mine.camp) out += `<section class="panel"><div class="kicker">Score à confirmer</div><p class="muted" style="margin-top:0">${esc(scorer.name)} a entré ce score. Si c’est le bon, confirme-le.</p><button type="button" class="btn block" data-act="confirm" ${S.busy ? 'disabled' : ''}>Confirmer le score</button></section>`;
+    else if (scorer && scorer.camp === mine.camp && scorer.id !== me) out += '<p class="muted small">En attente de confirmation par l’autre camp (facultatif : tu peux noter dès maintenant).</p>';
+    else out += '<p class="muted small">En attente de confirmation par l’autre camp (facultatif : tu peux noter dès maintenant).</p>';
+  }
+  if (m.status === 'scored' || m.status === 'confirmed') {
+    const mates = M.players.filter((p) => p.camp === mine.camp && p.id !== me);
+    const todo = mates.filter((p) => !M.rated.has(p.id));
+    out += '<section class="panel"><div class="kicker">Note tes coéquipiers</div><p class="muted small" style="margin-top:0">De 1 à 10. Anonyme : personne ne voit qui a mis quoi.</p>';
+    if (!mates.length) out += '<p class="muted small">Aucun coéquipier à noter pour l’instant.</p>';
+    mates.forEach((p) => {
+      if (M.rated.has(p.id)) out += `<div class="pickrow done"><b>${esc(p.name)}</b><span>Noté ✓</span></div>`;
+      else out += `<div class="pickrow"><b>${esc(p.name)}</b><div class="picks" role="group" aria-label="Note pour ${esc(p.name)}">` + [1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => `<button type="button" data-act="pick" data-u="${p.id}" data-n="${n}"${pressed(M.picks[p.id] === n)}>${n}</button>`).join('') + '</div></div>';
+    });
+    const n = todo.filter((p) => M.picks[p.id]).length;
+    if (todo.length) out += `<button type="button" class="btn block" data-act="sendnotes" ${n && !S.busy ? '' : 'disabled'} style="margin-top:14px">Envoyer mes notes${n ? ' (' + n + ')' : ''}</button>`;
+    out += '</section>';
+    out += `<section class="panel"><div class="kicker">Terminer</div><p class="muted small" style="margin-top:0">Quand tout le monde a noté, clôture le match : les cartes évoluent. Il faut au moins 3 notes pour qu’une carte bouge, et 3 points maximum par match.</p>${err}<button type="button" class="btn block" data-act="finalize" ${S.busy ? 'disabled' : ''}>Clôturer le match</button></section>`;
+  }
+  if (m.status === 'done') {
+    const d = mine.delta || 0;
+    out += `<section class="panel"><div class="kicker">Ta carte</div><p class="bigdelta ${d > 0 ? 'up' : d < 0 ? 'down' : ''}">${d === 0 ? '=' : sgn(d)}</p><p class="muted small">${d > 0 ? 'Bien joué, ta carte monte.' : d < 0 ? 'Match difficile, ta carte baisse un peu.' : 'Ta carte ne bouge pas (moins de 3 notes, ou note moyenne).'}</p><a class="btn block" href="#carte">Voir ma carte</a></section>`;
+  }
+  return out;
+}
+
 /* ---------- événements ---------- */
 document.addEventListener('submit', async (e) => {
   if (e.target.id !== 'authForm') return;
@@ -311,7 +435,8 @@ document.addEventListener('click', async (e) => {
     if (error && error.code !== '23505') { S.msg = tr(error); S.busy = false; render(); return; }
     try { await loadProfile(); } catch (err) { S.msg = tr(err); }
     S.busy = false; S.onb = { step: 0, name: '', pos: 'MIL', rotate: true, tags: [], photo: '' };
-    location.hash = '#carte'; render(true); toast('Bienvenue dans la ligue');
+    if (!curCode()) location.hash = '#carte';
+    await route(); toast('Bienvenue dans la ligue');
   }
   else if (a === 'pos') { await saveProfile({ pos: b.dataset.v }); }
   else if (a === 'photo-del') { if (b.dataset.t === 'me') await saveProfile({ photo_url: null }); else { S.onb.photo = ''; render(); } }
@@ -328,6 +453,35 @@ document.addEventListener('click', async (e) => {
     if (error) { S.teamMsg = tr(error); render(); return; }
     try { await loadProfile(); } catch (err) { S.teamMsg = tr(err); }
     render(true); toast(create ? 'Équipe créée' : 'Bienvenue dans l’équipe');
+  }
+  else if (a === 'newmatch') {
+    S.busy = true; S.mmsg = ''; render();
+    const { data, error } = await sb.rpc('create_match', { p_camp: 'a' });
+    S.busy = false;
+    if (error) { S.mmsg = tr(error); render(); return; }
+    location.hash = '#m/' + data.code;
+  }
+  else if (a === 'gocode') { const c = ($('#joinCode').value || '').trim().toUpperCase(); if (c.length >= 3) location.hash = '#m/' + c; }
+  else if (a === 'join') await mact(() => sb.rpc('join_match', { p_code: S.match.code, p_camp: b.dataset.c }));
+  else if (a === 'score') {
+    const sa = parseInt($('#sa').value, 10), sbb = parseInt($('#sb').value, 10);
+    if (!(sa >= 0 && sbb >= 0)) { S.mmsg = 'Entre les deux scores.'; render(); return; }
+    await mact(() => sb.rpc('submit_score', { p_match: S.match.m.id, p_a: sa, p_b: sbb }), 'Score enregistré');
+  }
+  else if (a === 'confirm') await mact(() => sb.rpc('confirm_score', { p_match: S.match.m.id }), 'Score confirmé');
+  else if (a === 'pick') { S.match.picks[b.dataset.u] = parseInt(b.dataset.n, 10); render(); }
+  else if (a === 'sendnotes') {
+    const M = S.match, rows = Object.keys(M.picks).filter((u) => !M.rated.has(u)).map((u) => ({ match_id: M.m.id, rater_id: S.session.user.id, rated_id: u, note: M.picks[u] }));
+    await mact(() => sb.from('ratings').insert(rows), 'Notes envoyées');
+  }
+  else if (a === 'finalize') {
+    await mact(() => sb.rpc('finalize_match', { p_match: S.match.m.id }), 'Match clôturé');
+    try { await loadProfile(); render(); checkTierUp(); } catch (err) { /* la carte se mettra à jour au prochain chargement */ }
+  }
+  else if (a === 'share-match') {
+    const url = mlink(S.match.code), text = 'Rejoins mon match sur CINKO. Ta carte se gagne sur le terrain.';
+    try { if (navigator.share) await navigator.share({ title: 'CINKO', text, url }); else throw 0; }
+    catch (err) { try { await navigator.clipboard.writeText(url); toast('Lien copié'); } catch (e2) { toast(url); } }
   }
   else if (a === 'copy-code') {
     const c = S.team.code;
@@ -352,7 +506,7 @@ document.addEventListener('change', async (e) => {
   }
 });
 
-window.addEventListener('hashchange', () => { render(true); previewTierUp(); });
+window.addEventListener('hashchange', () => route());
 
 sb.auth.onAuthStateChange((evt, session) => {
   if (evt === 'INITIAL_SESSION') return;
