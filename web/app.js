@@ -108,7 +108,7 @@ async function afterSession() {
 /* ---------- vues ---------- */
 function viewAuth() {
   const login = S.authMode === 'login';
-  return `<div><p class="kicker">Foot à 5</p><h1 class="screen-title">${login ? 'Connexion' : 'Crée ton compte'}</h1><p class="lede">${login ? 'Retrouve ta carte et ton équipe.' : 'Ta carte démarre à 60 et évolue match après match.'}</p></div>` +
+  return `<div><p class="kicker">Ta carte se gagne sur le terrain.</p><h1 class="screen-title">${login ? 'Connexion' : 'Crée ton compte'}</h1><p class="lede">${login ? 'Retrouve ta carte et ton équipe.' : 'Ta carte démarre à 60 et évolue match après match.'}</p></div>` +
     '<form id="authForm" class="panel" autocomplete="on">' +
     '<label class="field" style="margin-top:0"><span>E-mail</span><input id="email" type="email" inputmode="email" autocomplete="email" autocapitalize="none" required></label>' +
     `<label class="field"><span>Mot de passe</span><input id="password" type="password" autocomplete="${login ? 'current-password' : 'new-password'}" minlength="6" required></label>` +
