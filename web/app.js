@@ -235,6 +235,11 @@ async function saveProfile(patch) {
 
 /* ---------- passage de niveau ---------- */
 const TCOL = { cuivre: '#e0a672', argent: '#dfe5f2', or: '#ffd35c', legende: '#f5b83c' };
+const TUMSG = {
+  argent: 'Félicitations, tu es maintenant un joueur de niveau Argent. Tu sors du lot.',
+  or: 'Félicitations, tu es maintenant un joueur de niveau Or. Le terrain te respecte.',
+  legende: 'Félicitations, tu es maintenant un joueur de niveau Légende. Peu de joueurs y arrivent.'
+};
 function tierUp(card, fromK, toK) {
   const from = TIERS.find((t) => t.k === fromK), to = TIERS.find((t) => t.k === toK);
   const old = { ...card, ovr: from.min }, nw = { ...card, ovr: Math.max(card.ovr, to.min) };
@@ -247,7 +252,7 @@ function tierUp(card, fromK, toK) {
   }).join('');
   el.innerHTML = '<div class="tu-flash"></div><p class="tu-kick">Ta carte évolue</p>' +
     `<div class="tu-stage"><div class="tu-old">${cardHTML(old)}</div><div class="tu-new">${cardHTML(nw)}</div><i class="tu-ring"></i><i class="tu-ring r2"></i>${parts}</div>` +
-    `<div class="tu-name">${to.n}</div><p class="tu-sub">${esc(card.name)} passe ${to.n}.</p><button type="button" class="btn">Continuer</button>`;
+    `<div class="tu-name">${to.n}</div><p class="tu-sub">${esc(TUMSG[to.k])}</p><button type="button" class="btn">Continuer</button>`;
   document.body.appendChild(el);
   requestAnimationFrame(() => el.classList.add('go'));
   const close = () => { el.classList.add('out'); setTimeout(() => el.remove(), 400); };

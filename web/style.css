@@ -371,7 +371,7 @@ body.onb .app { padding-block: 14px 40px; }
 .tu.go .tu-p { animation: tuP 1.4s 1.4s cubic-bezier(.1,.7,.3,1) both; }
 .tu .tu-name { font: 900 clamp(34px, 11vw, 56px)/1 var(--display); letter-spacing: .06em; text-transform: uppercase; color: var(--tc); text-shadow: 0 0 28px var(--tc); opacity: 0; }
 .tu.go .tu-name { animation: tuUp .6s 2.1s cubic-bezier(.2,.9,.3,1.2) both; }
-.tu .tu-sub { color: #9aa3b8; font-size: 14px; opacity: 0; }
+.tu .tu-sub { color: #cfd5e4; font-size: 15px; line-height: 1.4; text-align: center; max-width: 280px; margin: 0; opacity: 0; }
 .tu.go .tu-sub { animation: tuUp .5s 2.4s ease both; }
 .tu .btn { opacity: 0; }
 .tu.go .btn { animation: tuUp .5s 2.7s ease both; }
