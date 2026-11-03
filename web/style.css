@@ -426,3 +426,15 @@ body.auth .panel { width: 100%; max-width: 420px; margin-inline: auto; }
 body.auth .linkbtn { display: block; margin-inline: auto; }
 body.auth .msg { text-align: center; }
 body.auth .authhead { margin-bottom: 12px; }
+
+/* iPhone zoome tout seul sur les champs dont le texte fait moins de 16px */
+input, select, textarea { font-size: 16px; }
+
+/* ---------- recadrage photo ---------- */
+.crop { position: fixed; inset: 0; z-index: 60; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; padding: 16px; background: #06080d; overscroll-behavior: contain; }
+.crop .kicker { margin: 0; }
+.crop-frame { position: relative; overflow: hidden; border-radius: 12px; border: 2px solid var(--chalk); background: #000; touch-action: none; cursor: grab; box-shadow: 0 0 0 100vmax rgba(0,0,0,.35); }
+.crop-img { position: absolute; left: 0; top: 0; max-width: none; transform-origin: 0 0; pointer-events: none; user-select: none; -webkit-user-drag: none; }
+.crop-hint { margin: 0; text-align: center; max-width: 280px; }
+.crop-zoom { width: min(280px, 80vw); margin: 0; }
+.crop .actions { width: min(320px, 90vw); grid-template-columns: 1fr 1fr; }

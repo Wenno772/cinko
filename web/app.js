@@ -206,27 +206,101 @@ function render(top) {
 let tt;
 function toast(m) { const t = $('#toast'); t.textContent = m; t.classList.add('on'); clearTimeout(tt); tt = setTimeout(() => t.classList.remove('on'), 2800); }
 
-/* ---------- photo ---------- */
-function handlePhoto(inp) {
+/* ---------- photo (avec recadrage) ---------- */
+const PW = 288, PH = 640; // même forme que la fenêtre photo de la carte
+
+function loadImg(file) {
+  return new Promise((res, rej) => {
+    const u = URL.createObjectURL(file), im = new Image();
+    im.onload = () => { URL.revokeObjectURL(u); res(im); };
+    im.onerror = () => { URL.revokeObjectURL(u); rej(new Error('img')); };
+    im.src = u;
+  });
+}
+
+// Ouvre l'écran de recadrage. Renvoie l'image recadrée (data URL) ou null si annulé.
+async function cropPhoto(file) {
+  const im = await loadImg(file);
+  // On réduit d'abord les grosses photos (évite les bugs iPhone avec les images énormes).
+  const k = Math.min(1, 1600 / Math.max(im.naturalWidth, im.naturalHeight));
+  const iw = Math.max(1, Math.round(im.naturalWidth * k)), ih = Math.max(1, Math.round(im.naturalHeight * k));
+  const src = document.createElement('canvas'); src.width = iw; src.height = ih;
+  const sx = src.getContext('2d'); sx.fillStyle = '#000'; sx.fillRect(0, 0, iw, ih); sx.drawImage(im, 0, 0, iw, ih);
+
+  return new Promise((resolve) => {
+    const fw = Math.round(Math.min(Math.min(window.innerWidth * 0.62, 230), (window.innerHeight * 0.5) * (PW / PH))), fh = Math.round(fw * (PH / PW));
+    const el = document.createElement('div');
+    el.className = 'crop'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-label', 'Recadrer la photo');
+    el.innerHTML = '<p class="kicker">Recadre ta photo</p>' +
+      `<div class="crop-frame" style="width:${fw}px;height:${fh}px"></div>` +
+      '<p class="muted small crop-hint">Glisse pour placer ton visage. Pince ou utilise le curseur pour zoomer.</p>' +
+      '<input type="range" class="crop-zoom" min="1" max="3" step="0.01" value="1" aria-label="Zoom">' +
+      '<div class="actions"><button type="button" class="btn ghost" data-c="no">Annuler</button><button type="button" class="btn" data-c="ok">Valider</button></div>';
+    const frame = el.querySelector('.crop-frame');
+    src.className = 'crop-img'; frame.appendChild(src);
+    document.body.appendChild(el);
+
+    const min = Math.max(fw / iw, fh / ih);
+    let z = 1, tx = (fw - iw * min) / 2, ty = (fh - ih * min) / 2;
+    const sc = () => min * z;
+    const apply = () => {
+      tx = Math.min(0, Math.max(fw - iw * sc(), tx)); ty = Math.min(0, Math.max(fh - ih * sc(), ty));
+      src.style.width = iw * sc() + 'px'; src.style.height = ih * sc() + 'px';
+      src.style.transform = `translate(${tx}px,${ty}px)`;
+    };
+    const setZoom = (nz, cx, cy) => { // zoom autour d'un point du cadre
+      nz = Math.min(3, Math.max(1, nz));
+      const old = sc(), px = (cx - tx) / old, py = (cy - ty) / old;
+      z = nz; tx = cx - px * sc(); ty = cy - py * sc(); apply();
+      el.querySelector('.crop-zoom').value = String(z);
+    };
+    apply();
+
+    const pts = new Map(); let last = null;
+    frame.addEventListener('pointerdown', (e) => { frame.setPointerCapture(e.pointerId); pts.set(e.pointerId, { x: e.clientX, y: e.clientY }); last = null; });
+    frame.addEventListener('pointermove', (e) => {
+      if (!pts.has(e.pointerId)) return;
+      const prev = pts.get(e.pointerId); pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      if (pts.size === 1) { tx += e.clientX - prev.x; ty += e.clientY - prev.y; apply(); }
+      else if (pts.size === 2) {
+        const [a, b] = [...pts.values()], d = Math.hypot(a.x - b.x, a.y - b.y);
+        if (last) setZoom(z * (d / last), fw / 2, fh / 2);
+        last = d;
+      }
+    });
+    const up = (e) => { pts.delete(e.pointerId); last = null; };
+    frame.addEventListener('pointerup', up); frame.addEventListener('pointercancel', up);
+    frame.addEventListener('wheel', (e) => { e.preventDefault(); const r = frame.getBoundingClientRect(); setZoom(z * (e.deltaY < 0 ? 1.08 : 0.93), e.clientX - r.left, e.clientY - r.top); }, { passive: false });
+    el.querySelector('.crop-zoom').addEventListener('input', (e) => setZoom(parseFloat(e.target.value), fw / 2, fh / 2));
+
+    const done = (ok) => {
+      document.removeEventListener('keydown', onKey);
+      let out = null;
+      if (ok) {
+        const c = document.createElement('canvas'); c.width = PW; c.height = PH;
+        const x = c.getContext('2d'); x.fillStyle = '#000'; x.fillRect(0, 0, PW, PH);
+        x.drawImage(src, -tx / sc(), -ty / sc(), fw / sc(), fh / sc(), 0, 0, PW, PH);
+        out = c.toDataURL('image/jpeg', 0.82);
+      }
+      el.remove(); resolve(out);
+    };
+    const onKey = (e) => { if (e.key === 'Escape') done(false); };
+    document.addEventListener('keydown', onKey);
+    el.querySelector('[data-c=ok]').addEventListener('click', () => done(true));
+    el.querySelector('[data-c=no]').addEventListener('click', () => done(false));
+  });
+}
+
+async function handlePhoto(inp) {
   const f = inp.files && inp.files[0], target = inp.dataset.photo;
   if (!f) return;
-  const rd = new FileReader();
-  rd.onload = () => {
-    const im = new Image();
-    im.onload = async () => {
-      try {
-        const W = 360, H = 450, c = document.createElement('canvas'); c.width = W; c.height = H;
-        const x = c.getContext('2d'), s = Math.max(W / im.width, H / im.height);
-        x.drawImage(im, (W - im.width * s) / 2, 0, im.width * s, im.height * s);
-        const url = c.toDataURL('image/jpeg', 0.8);
-        if (target === 'onb') { S.onb.photo = url; render(); }
-        else await saveProfile({ photo_url: url });
-      } catch (e) { toast('Photo illisible, essaie une autre image'); }
-    };
-    im.onerror = () => toast('Photo illisible, essaie une autre image');
-    im.src = rd.result;
-  };
-  rd.readAsDataURL(f);
+  try {
+    const url = await cropPhoto(f);
+    if (!url) return;
+    if (target === 'onb') { S.onb.photo = url; render(); }
+    else await saveProfile({ photo_url: url });
+  } catch (e) { toast('Photo illisible, essaie une autre image'); }
+  finally { inp.value = ''; }
 }
 
 async function saveProfile(patch) {
