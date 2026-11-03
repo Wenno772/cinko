@@ -414,3 +414,15 @@ input[type=number] { width: 100%; min-height: 46px; padding: 0 12px; background:
 .row2 input[type=text] { flex: 1; min-width: 0; }
 .camp .tb-top { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-bottom: 8px; }
 .bigdelta + .muted { margin-bottom: 14px; }
+
+/* ---------- écran de connexion centré ---------- */
+body.auth .app { min-height: 100svh; display: flex; flex-direction: column; }
+body.auth .top { justify-content: center; padding-top: 6px; }
+body.auth main { flex: 1; display: flex; flex-direction: column; justify-content: center; padding-bottom: 8vh; }
+body.auth .authhead { text-align: center; }
+body.auth .authhead .lede { margin-inline: auto; }
+body.auth .authhead .screen-title { margin-bottom: 10px; }
+body.auth .panel { width: 100%; max-width: 420px; margin-inline: auto; }
+body.auth .linkbtn { display: block; margin-inline: auto; }
+body.auth .msg { text-align: center; }
+body.auth .authhead { margin-bottom: 12px; }
