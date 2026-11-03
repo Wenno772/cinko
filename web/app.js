@@ -412,7 +412,7 @@ document.addEventListener('submit', async (e) => {
       const { error } = await sb.auth.signInWithPassword({ email, password });
       if (error) throw error;
     } else {
-      const { data, error } = await sb.auth.signUp({ email, password });
+      const { data, error } = await sb.auth.signUp({ email, password, options: { emailRedirectTo: location.origin + '/' } });
       if (error) throw error;
       if (!data.session) S.msg = 'Compte créé. Si Supabase demande une confirmation, vérifie ta boîte mail, puis connecte-toi.';
     }
